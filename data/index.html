@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MiniMello Smart Companion Configuration">
+    <title>MiniMello</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <h1>🤖 MiniMello</h1>
+            <div class="status-bar">
+                <span id="wifi-badge" class="badge badge-off">WiFi</span>
+                <span id="batt-badge" class="badge">---%</span>
+                <span id="version-badge" class="badge badge-dim">v---</span>
+            </div>
+        </header>
+
+        <!-- Tab Navigation -->
+        <nav class="tabs">
+            <button class="tab active" data-tab="dashboard">Dashboard</button>
+            <button class="tab" data-tab="wifi">WiFi</button>
+            <button class="tab" data-tab="display">Display</button>
+            <button class="tab" data-tab="settings">Settings</button>
+            <button class="tab" data-tab="system">System</button>
+        </nav>
+
+        <!-- Dashboard Tab -->
+        <section id="tab-dashboard" class="tab-content active">
+            <div class="card">
+                <h2>Emotion Control</h2>
+                <div class="emotion-grid">
+                    <button class="emotion-btn" data-emotion="0">😐 Neutral</button>
+                    <button class="emotion-btn" data-emotion="1">😊 Happy</button>
+                    <button class="emotion-btn" data-emotion="2">😢 Sad</button>
+                    <button class="emotion-btn" data-emotion="3">😠 Angry</button>
+                    <button class="emotion-btn" data-emotion="4">😮 Surprised</button>
+                    <button class="emotion-btn" data-emotion="5">😴 Sleepy</button>
+                    <button class="emotion-btn" data-emotion="6">😍 Love</button>
+                    <button class="emotion-btn" data-emotion="7">😉 Wink</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Clock Face</h2>
+                <div class="face-grid">
+                    <button class="face-btn" data-face="0">⌨️ Digital</button>
+                    <button class="face-btn" data-face="1">🕐 Analog</button>
+                    <button class="face-btn" data-face="2">✨ Minimal</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Engine</h2>
+                <button id="btn-switch" class="btn btn-primary btn-wide">Switch Engine</button>
+                <p class="muted" id="active-engine">Active: ---</p>
+            </div>
+        </section>
+
+        <!-- WiFi Tab -->
+        <section id="tab-wifi" class="tab-content">
+            <div class="card">
+                <h2>WiFi Setup</h2>
+                <button id="btn-scan" class="btn btn-secondary">Scan Networks</button>
+                <div id="wifi-networks" class="network-list"></div>
+
+                <div class="form-group">
+                    <label for="wifi-ssid">SSID</label>
+                    <input type="text" id="wifi-ssid" placeholder="Network name">
+                </div>
+                <div class="form-group">
+                    <label for="wifi-pass">Password</label>
+                    <input type="password" id="wifi-pass" placeholder="Password">
+                </div>
+                <button id="btn-wifi-save" class="btn btn-primary">Connect</button>
+                <p class="muted" id="wifi-status">Status: ---</p>
+            </div>
+        </section>
+
+        <!-- Display Tab -->
+        <section id="tab-display" class="tab-content">
+            <div class="card">
+                <h2>Auto-Switch</h2>
+                <div class="form-group">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="auto-switch">
+                        <span>Enable auto-switch</span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="switch-interval">Switch interval (seconds)</label>
+                    <input type="number" id="switch-interval" min="5" max="300" value="30">
+                </div>
+                <div class="form-group">
+                    <label for="clock-duration">Clock duration (seconds)</label>
+                    <input type="number" id="clock-duration" min="3" max="120" value="10">
+                </div>
+                <div class="form-group">
+                    <label for="default-engine">Default engine</label>
+                    <select id="default-engine">
+                        <option value="0">Emotion</option>
+                        <option value="1">Clock</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Brightness</h2>
+                <div class="form-group">
+                    <input type="range" id="brightness" min="0" max="100" value="100">
+                    <span id="brightness-val">100%</span>
+                </div>
+            </div>
+
+            <button id="btn-display-save" class="btn btn-primary btn-wide">Save Display Settings</button>
+        </section>
+
+        <!-- Settings Tab -->
+        <section id="tab-settings" class="tab-content">
+            <div class="card">
+                <h2>Timezone</h2>
+                <div class="form-group">
+                    <label for="tz-offset">UTC offset (hours)</label>
+                    <input type="number" id="tz-offset" step="0.5" min="-12" max="14" value="5.5">
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Night Mode</h2>
+                <div class="form-group">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="night-enabled">
+                        <span>Enable night mode (deep sleep)</span>
+                    </label>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="night-start">Start hour</label>
+                        <input type="number" id="night-start" min="0" max="23" value="23">
+                    </div>
+                    <div class="form-group">
+                        <label for="night-end">End hour</label>
+                        <input type="number" id="night-end" min="0" max="23" value="7">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Personality</h2>
+                <div class="form-group">
+                    <label for="mood-interval">Mood change interval (seconds)</label>
+                    <input type="range" id="mood-interval" min="60" max="900" step="30" value="300">
+                    <span id="mood-interval-val">300s</span>
+                    <p class="muted">How often the character changes mood. Lower = more lively, higher = more chill.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Weather</h2>
+                <div class="form-group">
+                    <label for="weather-key">OpenWeatherMap API Key</label>
+                    <input type="text" id="weather-key" placeholder="Your API key">
+                </div>
+                <div class="form-group">
+                    <label for="weather-city">City</label>
+                    <input type="text" id="weather-city" placeholder="e.g. Kolkata">
+                </div>
+            </div>
+
+            <button id="btn-settings-save" class="btn btn-primary btn-wide">Save Settings</button>
+        </section>
+
+        <!-- System Tab -->
+        <section id="tab-system" class="tab-content">
+            <div class="card">
+                <h2>Device Info</h2>
+                <table class="info-table">
+                    <tr><td>Version</td><td id="info-version">---</td></tr>
+                    <tr><td>Battery</td><td id="info-battery">---</td></tr>
+                    <tr><td>WiFi</td><td id="info-wifi">---</td></tr>
+                    <tr><td>IP</td><td id="info-ip">---</td></tr>
+                    <tr><td>Uptime</td><td id="info-uptime">---</td></tr>
+                    <tr><td>Free Heap</td><td id="info-heap">---</td></tr>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>Firmware Update</h2>
+                <button id="btn-ota-check" class="btn btn-secondary">Check for Update</button>
+                <button id="btn-ota-update" class="btn btn-danger" disabled>Install Update</button>
+                <p class="muted" id="ota-status">---</p>
+            </div>
+
+            <div class="card">
+                <h2>Debug</h2>
+                <div class="form-group">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="debug-mode">
+                        <span>Debug mode</span>
+                    </label>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
