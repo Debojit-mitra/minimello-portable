@@ -1,0 +1,17 @@
+<svg width="128" height="64" viewBox="0 0 128 64" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="64" rx="8" fill="#000"/>
+  <!-- Left Heart Eye: at (40,24) size=eyeW*1.8=25 -->
+  <circle cx="35" cy="20" r="7" fill="#fff"/>
+  <circle cx="45" cy="20" r="7" fill="#fff"/>
+  <polygon points="28,24 52,24 40,36" fill="#fff"/>
+  <!-- Right Heart Eye: at (88,24) -->
+  <circle cx="83" cy="20" r="7" fill="#fff"/>
+  <circle cx="93" cy="20" r="7" fill="#fff"/>
+  <polygon points="76,24 100,24 88,36" fill="#fff"/>
+  <!-- Left Blush -->
+  <circle cx="34" cy="42" r="5" fill="#fff" opacity="0.3"/>
+  <!-- Right Blush -->
+  <circle cx="94" cy="42" r="5" fill="#fff" opacity="0.3"/>
+  <!-- Mouth: wide smile mouthCurve=8 mouthW=14 mouthY=47 (48-1) -->
+  <path d="M 50,47 Q 64,57 78,47" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+</svg>

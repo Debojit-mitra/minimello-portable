@@ -1,0 +1,13 @@
+<svg width="128" height="64" viewBox="0 0 128 64" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="64" rx="8" fill="#000"/>
+  <!-- Left Eye: eyeW=12 eyeH=14 at (42,28) bounce=3 → y=31 -->
+  <rect x="30" y="17" width="24" height="28" rx="7" ry="7" fill="#fff"/>
+  <circle cx="42" cy="34" r="3" fill="#000"/>
+  <rect x="40" y="32" width="1.5" height="1.5" fill="#fff"/>
+  <!-- Right Eye: at (86,28) → y=31 -->
+  <rect x="74" y="17" width="24" height="28" rx="7" ry="7" fill="#fff"/>
+  <circle cx="86" cy="34" r="3" fill="#000"/>
+  <rect x="84" y="32" width="1.5" height="1.5" fill="#fff"/>
+  <!-- Mouth: frown mouthCurve=-8 mouthW=12 mouthY=53 (50+3 bounce) -->
+  <path d="M 52,53 Q 64,45 76,53" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+</svg>

@@ -49,6 +49,7 @@ private:
     String   _apName;
 
     uint32_t _connectStartMs = 0;
+    uint32_t _lastRetryMs = 0;
     uint32_t _lastNtpSyncMs = 0;
     bool     _timeSynced = false;
 

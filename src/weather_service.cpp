@@ -49,12 +49,15 @@ void WeatherService::fetch() {
         parseResponse(http.getString());
         _data.lastUpdateMs = millis();
         LOG_I("WEATHER", "Fetched: %.1f°C", _data.tempC);
+        _lastFetchMs = millis();
     } else {
-        LOG_E("WEATHER", "Fetch failed (HTTP %d)", code);
+        LOG_E("WEATHER", "Fetch failed (HTTP %d). Retrying in 60s.", code);
+        // If it fails, fake the last fetch time so it retries in 60 seconds 
+        // instead of waiting the full 30 minutes.
+        _lastFetchMs = millis() - WEATHER_REFRESH_MS + 60000;
     }
 
     http.end();
-    _lastFetchMs = millis();
     _fetching = false;
 }
 

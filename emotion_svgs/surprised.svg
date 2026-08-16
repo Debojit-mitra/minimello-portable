@@ -1,0 +1,14 @@
+<svg width="128" height="64" viewBox="0 0 128 64" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="64" rx="8" fill="#000"/>
+  <!-- Left Eye: eyeW=16 eyeH=20 at (40,20) big round, bounce=-3 → y=20 -->
+  <rect x="24" y="0" width="32" height="40" rx="10" ry="10" fill="#fff"/>
+  <circle cx="40" cy="20" r="2" fill="#000"/>
+  <rect x="38" y="18" width="1.5" height="1.5" fill="#fff"/>
+  <!-- Right Eye -->
+  <rect x="72" y="0" width="32" height="40" rx="10" ry="10" fill="#fff"/>
+  <circle cx="88" cy="20" r="2" fill="#000"/>
+  <rect x="86" y="18" width="1.5" height="1.5" fill="#fff"/>
+  <!-- Mouth: open O shape mouthOpenH=10 mouthW=6 mouthY=46 (49-3) -->
+  <ellipse cx="64" cy="46" rx="6" ry="5" fill="#fff"/>
+  <ellipse cx="64" cy="46" rx="4" ry="3" fill="#000"/>
+</svg>

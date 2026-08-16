@@ -1,0 +1,13 @@
+<svg width="128" height="64" viewBox="0 0 128 64" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="64" rx="8" fill="#000"/>
+  <!-- Left Arc Eye ^_^ at (40,25) bounce=-2 → y=25 -->
+  <path d="M 27,25 Q 40,17 53,25" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- Right Arc Eye -->
+  <path d="M 75,25 Q 88,17 101,25" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- Left Blush -->
+  <circle cx="34" cy="42" r="5" fill="#fff" opacity="0.3"/>
+  <!-- Right Blush -->
+  <circle cx="94" cy="42" r="5" fill="#fff" opacity="0.3"/>
+  <!-- Mouth: big smile mouthCurve=10 mouthW=16 mouthY=46 (48-2 bounce) -->
+  <path d="M 48,46 Q 64,58 80,46" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+</svg>

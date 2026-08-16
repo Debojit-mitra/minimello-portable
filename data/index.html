@@ -11,10 +11,9 @@
     <div class="app">
         <!-- Header -->
         <header class="header">
-            <h1>🤖 MiniMello</h1>
+            <h1 class="brand"><span class="brand-mini">Mini</span><span class="brand-mello">Mello</span></h1>
             <div class="status-bar">
-                <span id="wifi-badge" class="badge badge-off">WiFi</span>
-                <span id="batt-badge" class="badge">---%</span>
+                <span id="wifi-badge" class="badge badge-off">WiFi ✗</span>
                 <span id="version-badge" class="badge badge-dim">v---</span>
             </div>
         </header>
@@ -28,66 +27,114 @@
             <button class="tab" data-tab="system">System</button>
         </nav>
 
-        <!-- Dashboard Tab -->
+        <!-- ==================== Dashboard Tab ==================== -->
         <section id="tab-dashboard" class="tab-content active">
             <div class="card">
                 <h2>Emotion Control</h2>
+                <p class="card-subtitle">Tap to set the current expression</p>
                 <div class="emotion-grid">
-                    <button class="emotion-btn" data-emotion="0">😐 Neutral</button>
-                    <button class="emotion-btn" data-emotion="1">😊 Happy</button>
-                    <button class="emotion-btn" data-emotion="2">😢 Sad</button>
-                    <button class="emotion-btn" data-emotion="3">😠 Angry</button>
-                    <button class="emotion-btn" data-emotion="4">😮 Surprised</button>
-                    <button class="emotion-btn" data-emotion="5">😴 Sleepy</button>
-                    <button class="emotion-btn" data-emotion="6">😍 Love</button>
-                    <button class="emotion-btn" data-emotion="7">😉 Wink</button>
+                    <div class="emotion-card" data-emotion="0">
+                        <div class="card-thumb"><img src="https://i.ibb.co/n5VjrHP/neutral.webp" alt="Neutral"></div>
+                        <span class="card-label">Neutral</span>
+                    </div>
+                    <div class="emotion-card" data-emotion="1">
+                        <div class="card-thumb"><img src="https://i.ibb.co/chzffRCb/happy.webp" alt="Happy"></div>
+                        <span class="card-label">Happy</span>
+                    </div>
+                    <div class="emotion-card" data-emotion="2">
+                        <div class="card-thumb"><img src="https://i.ibb.co/0knkSKW/sad.webp" alt="Sad"></div>
+                        <span class="card-label">Sad</span>
+                    </div>
+                    <div class="emotion-card" data-emotion="3">
+                        <div class="card-thumb"><img src="https://i.ibb.co/QFDz7wnD/angry.webp" alt="Angry"></div>
+                        <span class="card-label">Angry</span>
+                    </div>
+                    <div class="emotion-card" data-emotion="4">
+                        <div class="card-thumb"><img src="https://i.ibb.co/HDV6wVM4/surprised.webp" alt="Surprised"></div>
+                        <span class="card-label">Surprised</span>
+                    </div>
+                    <div class="emotion-card" data-emotion="5">
+                        <div class="card-thumb"><img src="https://i.ibb.co/jZ5vpcdc/sleepy.webp" alt="Sleepy"></div>
+                        <span class="card-label">Sleepy</span>
+                    </div>
+                    <div class="emotion-card" data-emotion="6">
+                        <div class="card-thumb"><img src="https://i.ibb.co/wZ0LcZ5X/love.webp" alt="Love"></div>
+                        <span class="card-label">Love</span>
+                    </div>
+                    <div class="emotion-card" data-emotion="7">
+                        <div class="card-thumb"><img src="https://i.ibb.co/Q7CzDfRV/wink.webp" alt="Wink"></div>
+                        <span class="card-label">Wink</span>
+                    </div>
                 </div>
             </div>
 
             <div class="card">
                 <h2>Clock Face</h2>
+                <p class="card-subtitle">Choose how the time is displayed</p>
                 <div class="face-grid">
-                    <button class="face-btn" data-face="0">⌨️ Digital</button>
-                    <button class="face-btn" data-face="1">🕐 Analog</button>
-                    <button class="face-btn" data-face="2">✨ Minimal</button>
+                    <div class="face-card" data-face="0">
+                        <div class="card-thumb"><img src="https://i.ibb.co/6cmNG6Fc/face-digital.webp" alt="Digital"></div>
+                        <span class="card-label">Digital</span>
+                    </div>
+                    <div class="face-card" data-face="1">
+                        <div class="card-thumb"><img src="https://i.ibb.co/QjPt1YhW/face-typo.webp" alt="Typographic Word"></div>
+                        <span class="card-label">Typographic Word</span>
+                    </div>
+                    <div class="face-card" data-face="2">
+                        <div class="card-thumb"><img src="https://i.ibb.co/4nyRp0zQ/face-minimal.webp" alt="Minimal"></div>
+                        <span class="card-label">Minimal</span>
+                    </div>
                 </div>
             </div>
 
             <div class="card">
-                <h2>Engine</h2>
-                <button id="btn-switch" class="btn btn-primary btn-wide">Switch Engine</button>
-                <p class="muted" id="active-engine">Active: ---</p>
+                <h2>Active Face</h2>
+                <button id="btn-switch" class="btn btn-primary btn-wide">Switch Face</button>
+                <div class="active-indicator" style="margin-top: 12px;">
+                    <span class="label">Currently showing</span>
+                    <span class="value" id="active-engine">---</span>
+                </div>
             </div>
         </section>
 
-        <!-- WiFi Tab -->
+        <!-- ==================== WiFi Tab ==================== -->
         <section id="tab-wifi" class="tab-content">
             <div class="card">
+                <h2>Connection Status</h2>
+                <div class="wifi-status-bar">
+                    <div class="wifi-status-dot" id="wifi-dot"></div>
+                    <div class="wifi-status-text" id="wifi-status-detail">Not connected</div>
+                </div>
+            </div>
+
+            <div class="card">
                 <h2>WiFi Setup</h2>
-                <button id="btn-scan" class="btn btn-secondary">Scan Networks</button>
+                <button id="btn-scan" class="btn btn-secondary btn-wide" style="margin-top:0;margin-bottom:10px;">🔍 Scan Networks</button>
                 <div id="wifi-networks" class="network-list"></div>
 
                 <div class="form-group">
-                    <label for="wifi-ssid">SSID</label>
-                    <input type="text" id="wifi-ssid" placeholder="Network name">
+                    <label for="wifi-ssid">Network Name (SSID)</label>
+                    <input type="text" id="wifi-ssid" placeholder="Select or type network name">
                 </div>
                 <div class="form-group">
                     <label for="wifi-pass">Password</label>
-                    <input type="password" id="wifi-pass" placeholder="Password">
+                    <div class="password-wrapper">
+                        <input type="password" id="wifi-pass" placeholder="Enter password">
+                        <button type="button" class="password-toggle" id="wifi-pass-toggle" title="Show password">👁</button>
+                    </div>
                 </div>
-                <button id="btn-wifi-save" class="btn btn-primary">Connect</button>
-                <p class="muted" id="wifi-status">Status: ---</p>
+                <button id="btn-wifi-save" class="btn btn-primary btn-wide">Connect</button>
             </div>
         </section>
 
-        <!-- Display Tab -->
+        <!-- ==================== Display Tab ==================== -->
         <section id="tab-display" class="tab-content">
             <div class="card">
                 <h2>Auto-Switch</h2>
                 <div class="form-group">
                     <label class="toggle-label">
                         <input type="checkbox" id="auto-switch">
-                        <span>Enable auto-switch</span>
+                        <span>Enable auto-switch between faces</span>
                     </label>
                 </div>
                 <div class="form-group">
@@ -99,32 +146,71 @@
                     <input type="number" id="clock-duration" min="3" max="120" value="10">
                 </div>
                 <div class="form-group">
-                    <label for="default-engine">Default engine</label>
+                    <label for="default-engine">Default Face</label>
                     <select id="default-engine">
-                        <option value="0">Emotion</option>
-                        <option value="1">Clock</option>
+                        <option value="0">Emotion Face</option>
+                        <option value="1">Clock Face</option>
                     </select>
                 </div>
             </div>
 
             <div class="card">
                 <h2>Brightness</h2>
-                <div class="form-group">
+                <div class="range-group">
                     <input type="range" id="brightness" min="0" max="100" value="100">
-                    <span id="brightness-val">100%</span>
+                    <span class="range-value" id="brightness-val">100%</span>
                 </div>
             </div>
 
             <button id="btn-display-save" class="btn btn-primary btn-wide">Save Display Settings</button>
         </section>
 
-        <!-- Settings Tab -->
+        <!-- ==================== Settings Tab ==================== -->
         <section id="tab-settings" class="tab-content">
             <div class="card">
                 <h2>Timezone</h2>
                 <div class="form-group">
-                    <label for="tz-offset">UTC offset (hours)</label>
-                    <input type="number" id="tz-offset" step="0.5" min="-12" max="14" value="5.5">
+                    <label for="tz-offset">Select your timezone</label>
+                    <select id="tz-offset">
+                        <option value="-43200">(UTC-12:00) Baker Island</option>
+                        <option value="-39600">(UTC-11:00) American Samoa</option>
+                        <option value="-36000">(UTC-10:00) Hawaii</option>
+                        <option value="-34200">(UTC-09:30) Marquesas Islands</option>
+                        <option value="-32400">(UTC-09:00) Alaska</option>
+                        <option value="-28800">(UTC-08:00) Pacific Time (US)</option>
+                        <option value="-25200">(UTC-07:00) Mountain Time (US)</option>
+                        <option value="-21600">(UTC-06:00) Central Time (US)</option>
+                        <option value="-18000">(UTC-05:00) Eastern Time (US)</option>
+                        <option value="-14400">(UTC-04:00) Atlantic Time</option>
+                        <option value="-12600">(UTC-03:30) Newfoundland</option>
+                        <option value="-10800">(UTC-03:00) Buenos Aires</option>
+                        <option value="-7200">(UTC-02:00) Mid-Atlantic</option>
+                        <option value="-3600">(UTC-01:00) Azores</option>
+                        <option value="0">(UTC+00:00) London / UTC</option>
+                        <option value="3600">(UTC+01:00) Paris / Berlin</option>
+                        <option value="7200">(UTC+02:00) Cairo / Johannesburg</option>
+                        <option value="10800">(UTC+03:00) Moscow / Riyadh</option>
+                        <option value="12600">(UTC+03:30) Tehran</option>
+                        <option value="14400">(UTC+04:00) Dubai</option>
+                        <option value="16200">(UTC+04:30) Kabul</option>
+                        <option value="18000">(UTC+05:00) Karachi / Tashkent</option>
+                        <option value="19800" selected>(UTC+05:30) India (IST)</option>
+                        <option value="20700">(UTC+05:45) Nepal</option>
+                        <option value="21600">(UTC+06:00) Dhaka</option>
+                        <option value="23400">(UTC+06:30) Myanmar</option>
+                        <option value="25200">(UTC+07:00) Bangkok / Jakarta</option>
+                        <option value="28800">(UTC+08:00) Singapore / Beijing</option>
+                        <option value="31500">(UTC+08:45) Eucla</option>
+                        <option value="32400">(UTC+09:00) Tokyo / Seoul</option>
+                        <option value="34200">(UTC+09:30) Adelaide</option>
+                        <option value="36000">(UTC+10:00) Sydney / Melbourne</option>
+                        <option value="37800">(UTC+10:30) Lord Howe Island</option>
+                        <option value="39600">(UTC+11:00) Solomon Islands</option>
+                        <option value="43200">(UTC+12:00) Auckland / Fiji</option>
+                        <option value="45900">(UTC+12:45) Chatham Islands</option>
+                        <option value="46800">(UTC+13:00) Samoa</option>
+                        <option value="50400">(UTC+14:00) Kiribati</option>
+                    </select>
                 </div>
             </div>
 
@@ -133,9 +219,10 @@
                 <div class="form-group">
                     <label class="toggle-label">
                         <input type="checkbox" id="night-enabled">
-                        <span>Enable night mode (deep sleep)</span>
+                        <span>Enable screensaver at night</span>
                     </label>
                 </div>
+                <p class="muted" style="margin-bottom: 12px;">Screen turns off during night hours. Touch to wake.</p>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="night-start">Start hour</label>
@@ -151,9 +238,11 @@
             <div class="card">
                 <h2>Personality</h2>
                 <div class="form-group">
-                    <label for="mood-interval">Mood change interval (seconds)</label>
-                    <input type="range" id="mood-interval" min="60" max="900" step="30" value="300">
-                    <span id="mood-interval-val">300s</span>
+                    <label for="mood-interval">Mood change interval</label>
+                    <div class="range-group">
+                        <input type="range" id="mood-interval" min="60" max="900" step="30" value="300">
+                        <span class="range-value" id="mood-interval-val">300s</span>
+                    </div>
                     <p class="muted">How often the character changes mood. Lower = more lively, higher = more chill.</p>
                 </div>
             </div>
@@ -162,48 +251,64 @@
                 <h2>Weather</h2>
                 <div class="form-group">
                     <label for="weather-key">OpenWeatherMap API Key</label>
-                    <input type="text" id="weather-key" placeholder="Your API key">
+                    <div class="password-wrapper">
+                        <input type="password" id="weather-key" placeholder="Your API key">
+                        <button type="button" class="password-toggle" id="weather-key-toggle" title="Show key">👁</button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="weather-city">City</label>
-                    <input type="text" id="weather-city" placeholder="e.g. Kolkata">
+                    <input type="text" id="weather-city" placeholder="e.g. Guwahati">
                 </div>
             </div>
 
             <button id="btn-settings-save" class="btn btn-primary btn-wide">Save Settings</button>
         </section>
 
-        <!-- System Tab -->
+        <!-- ==================== System Tab ==================== -->
         <section id="tab-system" class="tab-content">
             <div class="card">
                 <h2>Device Info</h2>
                 <table class="info-table">
                     <tr><td>Version</td><td id="info-version">---</td></tr>
-                    <tr><td>Battery</td><td id="info-battery">---</td></tr>
+                    <tr id="battery-row" class="hidden"><td>Battery</td><td id="info-battery">---</td></tr>
                     <tr><td>WiFi</td><td id="info-wifi">---</td></tr>
-                    <tr><td>IP</td><td id="info-ip">---</td></tr>
+                    <tr><td>IP Address</td><td id="info-ip">---</td></tr>
                     <tr><td>Uptime</td><td id="info-uptime">---</td></tr>
-                    <tr><td>Free Heap</td><td id="info-heap">---</td></tr>
+                    <tr><td>Free Memory</td><td id="info-heap">---</td></tr>
                 </table>
             </div>
 
             <div class="card">
                 <h2>Firmware Update</h2>
-                <button id="btn-ota-check" class="btn btn-secondary">Check for Update</button>
-                <button id="btn-ota-update" class="btn btn-danger" disabled>Install Update</button>
-                <p class="muted" id="ota-status">---</p>
+                <button id="btn-ota-check" class="btn btn-secondary btn-wide" style="margin-top:0;">Check for Update</button>
+                <button id="btn-ota-update" class="btn btn-danger btn-wide" disabled>Install Update</button>
+                <div class="progress-bar hidden" id="ota-progress-bar">
+                    <div class="progress-fill" id="ota-progress-fill"></div>
+                </div>
+                <p class="muted" id="ota-status"></p>
             </div>
 
             <div class="card">
-                <h2>Debug</h2>
-                <div class="form-group">
-                    <label class="toggle-label">
-                        <input type="checkbox" id="debug-mode">
-                        <span>Debug mode</span>
-                    </label>
-                </div>
+                <h2>Device Control</h2>
+                <button id="btn-restart" class="btn btn-ghost btn-wide" style="margin-top:0;">🔄 Restart Device</button>
             </div>
         </section>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- Custom Modal -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal">
+            <h3 id="modal-title">Confirm</h3>
+            <p id="modal-message"></p>
+            <div class="modal-actions">
+                <button id="modal-btn-cancel" class="btn btn-ghost">Cancel</button>
+                <button id="modal-btn-confirm" class="btn btn-primary">Confirm</button>
+            </div>
+        </div>
     </div>
 
     <script src="app.js"></script>

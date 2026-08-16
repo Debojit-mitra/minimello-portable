@@ -27,5 +27,8 @@
 // Large number: bold Helvetica, for analog face day number
 #define FONT_LARGE_NUM u8g2_font_helvB14_tf
 
+// Extra Large: 16px clean sans-serif for weather temperature
+#define FONT_WEATHER_TEMP u8g2_font_logisoso16_tf
+
 // --- Global U8g2 font renderer (defined in main.cpp) ---
 extern U8G2_FOR_ADAFRUIT_GFX u8g2Fonts;

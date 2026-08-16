@@ -41,14 +41,21 @@ void TouchManager::update() {
     if (_currentState && !_lastState) {
         _pressStartMs = now;
         _longPressTriggered = false;
+        _veryLongPressTriggered = false;
     }
 
     // HELD — check for long press
     if (_currentState && _lastState) {
-        if (!_longPressTriggered &&
-            (now - _pressStartMs >= TOUCH_LONG_PRESS_MS)) {
+        uint32_t holdTime = now - _pressStartMs;
+        
+        if (!_longPressTriggered && holdTime >= TOUCH_LONG_PRESS_MS) {
             _longPressTriggered = true;
             emit(TouchEvent::LONG_PRESS);
+        }
+        
+        if (!_veryLongPressTriggered && holdTime >= TOUCH_VERY_LONG_PRESS_MS) {
+            _veryLongPressTriggered = true;
+            emit(TouchEvent::VERY_LONG_PRESS);
         }
     }
 

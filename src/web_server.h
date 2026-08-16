@@ -44,6 +44,8 @@ private:
     void handlePostSwitch(AsyncWebServerRequest* req);
     void handlePostOtaCheck(AsyncWebServerRequest* req);
     void handlePostOtaUpdate(AsyncWebServerRequest* req);
+    void handleGetOtaProgress(AsyncWebServerRequest* req);
+    void handlePostRestart(AsyncWebServerRequest* req);
     void handleGetWifiScan(AsyncWebServerRequest* req);
 
     // CORS header helper

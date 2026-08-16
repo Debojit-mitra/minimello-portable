@@ -1,0 +1,14 @@
+<svg width="128" height="64" viewBox="0 0 128 64" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="64" rx="8" fill="#000"/>
+  <!-- Left Eye: eyeH=3 (nearly shut) at (40,31) bounce=3 → y=31 -->
+  <rect x="27" y="28" width="26" height="6" rx="3" ry="3" fill="#fff"/>
+  <!-- Right Eye -->
+  <rect x="75" y="28" width="26" height="6" rx="3" ry="3" fill="#fff"/>
+  <!-- Mouth: small yawn mouthOpenH=5 mouthW=8 mouthY=51 (48+3) -->
+  <ellipse cx="64" cy="51" rx="8" ry="3" fill="#fff"/>
+  <ellipse cx="64" cy="51" rx="6" ry="1.5" fill="#000"/>
+  <!-- Z z z particles -->
+  <text x="100" y="14" font-family="sans-serif" font-size="10" font-weight="bold" fill="#fff" opacity="0.7">Z</text>
+  <text x="108" y="8" font-family="sans-serif" font-size="7" font-weight="bold" fill="#fff" opacity="0.5">z</text>
+  <text x="114" y="4" font-family="sans-serif" font-size="5" font-weight="bold" fill="#fff" opacity="0.3">z</text>
+</svg>

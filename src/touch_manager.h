@@ -13,6 +13,7 @@ enum class TouchEvent : uint8_t {
     NONE = 0,
     TAP,
     LONG_PRESS,
+    VERY_LONG_PRESS,
     DOUBLE_TAP
 };
 
@@ -41,6 +42,7 @@ private:
     bool     _lastState = false;
     bool     _currentState = false;
     bool     _longPressTriggered = false;
+    bool     _veryLongPressTriggered = false;
 
     uint32_t _pressStartMs = 0;
     uint32_t _lastReleaseMs = 0;
