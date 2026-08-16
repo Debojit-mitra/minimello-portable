@@ -26,11 +26,12 @@ public:
     volatile bool brightnessChanged = false;  // set by WebUI, consumed by main loop
     uint8_t  defaultEngine;     // 0 = emotion, 1 = clock
 
-    // --- Auto-Switch ---
+    // --- Auto-Switch & OLED ---
     bool     autoSwitch;        // enable engine auto-switching
     uint16_t switchIntervalS;   // seconds between switches
     uint16_t clockDurationS;    // seconds to show clock
-
+    bool     oledProtectionEnabled; // pixel shifting
+    
     // --- Personality / Mood ---
     uint16_t moodIntervalS;     // seconds between ambient mood changes
 
@@ -40,9 +41,13 @@ public:
     volatile bool    nightModeEnabled;
 
     // --- Weather ---
-    String   weatherApiKey;
+    float    weatherLat;
+    float    weatherLon;
     String   weatherCity;
     volatile bool weatherChanged = false;   // set by WebUI, consumed by main loop
+
+    // --- User ---
+    String   userName;          // first name or nickname (max 15 chars)
 
     // --- Debug ---
     bool     debugMode;

@@ -1,4 +1,4 @@
-#include "network_manager.h"
+#include "network/network_manager.h"
 #include "config.h"
 #include "logger.h"
 #include <esp_wifi.h>
@@ -15,17 +15,6 @@ void NetworkManager::begin(const String &ssid, const String &pass,
   _tzOffset = tzOffset;
 
   generateAPName();
-
-  WiFi.mode(WIFI_STA);
-  WiFi.setAutoReconnect(true);
-
-  // Boost WiFi performance to compensate for 3D printed case attenuation
-  // 1. Disable modem sleep (drastically improves reliability and perceived
-  // signal strength)
-  WiFi.setSleep(false);
-  // 2. Explicitly force maximum TX power (19.5 dBm is the standard max for
-  // ESP32)
-  WiFi.setTxPower(WIFI_POWER_19_5dBm);
 
   if (_ssid.length() > 0) {
     connectSTA(_ssid, _pass);
@@ -98,17 +87,33 @@ void NetworkManager::connectSTA(const String &ssid, const String &pass) {
   WiFi.mode(WIFI_OFF);
   delay(1000);
   WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
+  WiFi.setSleep(false);
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);
 
-  // Connect
   WiFi.begin(_ssid.c_str(), _pass.c_str());
 }
 
 void NetworkManager::startAP() {
   _state = NetState::AP_MODE;
-  _lastRetryMs = millis(); // Initialize retry timer
+  _lastRetryMs = millis();
 
-  WiFi.mode(WIFI_AP_STA); // AP + STA so we can still scan and retry connections
-  WiFi.softAP(_apName.c_str());
+  // Hard reset the radio to clear any stale PHY state from soft
+  // reboots/flashing
+  WiFi.disconnect(true, true);
+  WiFi.mode(WIFI_OFF);
+  delay(500);
+
+  if (_ssid.length() > 0) {
+    WiFi.mode(WIFI_AP_STA);
+  } else {
+    WiFi.mode(WIFI_AP);
+  }
+
+  // setTxPower only — do NOT call WiFi.setSleep in AP mode, it breaks DHCP
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);
+  WiFi.softAP(_apName.c_str(), WIFI_AP_PASSWORD);
+  delay(100); // Give DHCP server time to initialize before clients connect
 
   LOG_I("WIFI", "AP started: %s (IP: %s)", _apName.c_str(),
         WiFi.softAPIP().toString().c_str());

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <title>MiniMello</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="app">
         <!-- Header -->
@@ -50,7 +52,8 @@
                         <span class="card-label">Angry</span>
                     </div>
                     <div class="emotion-card" data-emotion="4">
-                        <div class="card-thumb"><img src="https://i.ibb.co/HDV6wVM4/surprised.webp" alt="Surprised"></div>
+                        <div class="card-thumb"><img src="https://i.ibb.co/HDV6wVM4/surprised.webp" alt="Surprised">
+                        </div>
                         <span class="card-label">Surprised</span>
                     </div>
                     <div class="emotion-card" data-emotion="5">
@@ -73,15 +76,18 @@
                 <p class="card-subtitle">Choose how the time is displayed</p>
                 <div class="face-grid">
                     <div class="face-card" data-face="0">
-                        <div class="card-thumb"><img src="https://i.ibb.co/6cmNG6Fc/face-digital.webp" alt="Digital"></div>
+                        <div class="card-thumb"><img src="https://i.ibb.co/6cmNG6Fc/face-digital.webp" alt="Digital">
+                        </div>
                         <span class="card-label">Digital</span>
                     </div>
                     <div class="face-card" data-face="1">
-                        <div class="card-thumb"><img src="https://i.ibb.co/QjPt1YhW/face-typo.webp" alt="Typographic Word"></div>
+                        <div class="card-thumb"><img src="https://i.ibb.co/QjPt1YhW/face-typo.webp"
+                                alt="Typographic Word"></div>
                         <span class="card-label">Typographic Word</span>
                     </div>
                     <div class="face-card" data-face="2">
-                        <div class="card-thumb"><img src="https://i.ibb.co/4nyRp0zQ/face-minimal.webp" alt="Minimal"></div>
+                        <div class="card-thumb"><img src="https://i.ibb.co/4nyRp0zQ/face-minimal.webp" alt="Minimal">
+                        </div>
                         <span class="card-label">Minimal</span>
                     </div>
                 </div>
@@ -109,9 +115,14 @@
 
             <div class="card">
                 <h2>WiFi Setup</h2>
-                <button id="btn-scan" class="btn btn-secondary btn-wide" style="margin-top:0;margin-bottom:10px;">🔍 Scan Networks</button>
+                <button id="btn-scan" class="btn btn-secondary btn-wide" style="margin-top:0;margin-bottom:10px;">🔍
+                    Scan Networks</button>
                 <div id="wifi-networks" class="network-list"></div>
 
+                <div class="form-group" id="setup-nickname-group">
+                    <label for="user-name">Your Nickname</label>
+                    <input type="text" id="user-name" placeholder="What should I call you?" maxlength="15">
+                </div>
                 <div class="form-group">
                     <label for="wifi-ssid">Network Name (SSID)</label>
                     <input type="text" id="wifi-ssid" placeholder="Select or type network name">
@@ -120,8 +131,15 @@
                     <label for="wifi-pass">Password</label>
                     <div class="password-wrapper">
                         <input type="password" id="wifi-pass" placeholder="Enter password">
-                        <button type="button" class="password-toggle" id="wifi-pass-toggle" title="Show password">👁</button>
+                        <button type="button" class="password-toggle" id="wifi-pass-toggle"
+                            title="Show password">👁</button>
                     </div>
+                </div>
+
+                <div id="setup-completion-note" style="background: rgba(255, 49, 49, 0.1); border: 1px solid var(--primary); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 20px;">
+                    <p style="font-size: 0.82rem; color: #fff; margin: 0; line-height: 1.4;">
+                        <strong style="color: var(--primary);">Note:</strong> After connecting to WiFi, visit <strong style="color: var(--primary);">http://minimello.local</strong> on your home network to configure weather and other settings.
+                    </p>
                 </div>
                 <button id="btn-wifi-save" class="btn btn-primary btn-wide">Connect</button>
             </div>
@@ -144,6 +162,20 @@
                 <div class="form-group">
                     <label for="clock-duration">Clock duration (seconds)</label>
                     <input type="number" id="clock-duration" min="3" max="120" value="10">
+                </div>
+                <div class="form-group"
+                    style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                        <label for="oled-protection" style="margin-bottom: 0;">OLED burn-in protection</label>
+                    </div>
+                    <span
+                        style="display: block; font-size: 0.75rem; color: #888; margin-bottom: 8px; font-weight: normal; line-height: 1.3;">
+                        Imperceptibly shifts pixels to prevent burn-in on static clocks.
+                    </span>
+                    <label class="toggle-label">
+                        <input type="checkbox" id="oled-protection">
+                    </label>
                 </div>
                 <div class="form-group">
                     <label for="default-engine">Default Face</label>
@@ -215,6 +247,15 @@
             </div>
 
             <div class="card">
+                <h2>Personalization</h2>
+                <div class="form-group">
+                    <label for="settings-user-name">Your Nickname</label>
+                    <input type="text" id="settings-user-name" placeholder="What should I call you?" maxlength="15">
+                    <p class="muted" style="margin-top: 4px;">Shown on the OLED greeting when MiniMello boots up.</p>
+                </div>
+            </div>
+
+            <div class="card">
                 <h2>Night Mode</h2>
                 <div class="form-group">
                     <label class="toggle-label">
@@ -248,19 +289,25 @@
             </div>
 
             <div class="card">
-                <h2>Weather</h2>
-                <div class="form-group">
-                    <label for="weather-key">OpenWeatherMap API Key</label>
-                    <div class="password-wrapper">
-                        <input type="password" id="weather-key" placeholder="Your API key">
-                        <button type="button" class="password-toggle" id="weather-key-toggle" title="Show key">👁</button>
-                    </div>
+                <h2>Weather Location</h2>
+                <div class="form-group" style="display: flex; gap: 8px;">
+                    <input type="text" id="weather-city-search" placeholder="Enter city name..." style="flex: 1;">
+                    <button id="btn-weather-search" class="btn btn-secondary" style="padding: 0 16px;">Search</button>
                 </div>
-                <div class="form-group">
-                    <label for="weather-city">City</label>
-                    <input type="text" id="weather-city" placeholder="e.g. Guwahati">
+                <div id="weather-search-results" style="display: none; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 14px; max-height: 150px; overflow-y: auto;">
+                    <!-- Results populated here -->
                 </div>
+                <button id="btn-weather-auto" class="btn btn-secondary btn-wide" style="margin-top: 0; margin-bottom: 14px;">📍 Auto-Detect Location</button>
+                <div id="weather-current-location" class="muted" style="margin-top: -4px;">
+                    Current: <span id="weather-city-display">Unknown</span>
+                </div>
+                <!-- Hidden inputs to store state for saving -->
+                <input type="hidden" id="weather-lat" value="0">
+                <input type="hidden" id="weather-lon" value="0">
+                <input type="hidden" id="weather-city" value="">
             </div>
+
+
 
             <button id="btn-settings-save" class="btn btn-primary btn-wide">Save Settings</button>
         </section>
@@ -270,18 +317,37 @@
             <div class="card">
                 <h2>Device Info</h2>
                 <table class="info-table">
-                    <tr><td>Version</td><td id="info-version">---</td></tr>
-                    <tr id="battery-row" class="hidden"><td>Battery</td><td id="info-battery">---</td></tr>
-                    <tr><td>WiFi</td><td id="info-wifi">---</td></tr>
-                    <tr><td>IP Address</td><td id="info-ip">---</td></tr>
-                    <tr><td>Uptime</td><td id="info-uptime">---</td></tr>
-                    <tr><td>Free Memory</td><td id="info-heap">---</td></tr>
+                    <tr>
+                        <td>Version</td>
+                        <td id="info-version">---</td>
+                    </tr>
+                    <tr id="battery-row" class="hidden">
+                        <td>Battery</td>
+                        <td id="info-battery">---</td>
+                    </tr>
+                    <tr>
+                        <td>WiFi</td>
+                        <td id="info-wifi">---</td>
+                    </tr>
+                    <tr>
+                        <td>IP Address</td>
+                        <td id="info-ip">---</td>
+                    </tr>
+                    <tr>
+                        <td>Uptime</td>
+                        <td id="info-uptime">---</td>
+                    </tr>
+                    <tr>
+                        <td>Free Memory</td>
+                        <td id="info-heap">---</td>
+                    </tr>
                 </table>
             </div>
 
-            <div class="card">
+            <div class="card" id="ota-card">
                 <h2>Firmware Update</h2>
-                <button id="btn-ota-check" class="btn btn-secondary btn-wide" style="margin-top:0;">Check for Update</button>
+                <button id="btn-ota-check" class="btn btn-secondary btn-wide" style="margin-top:0;">Check for
+                    Update</button>
                 <button id="btn-ota-update" class="btn btn-danger btn-wide" disabled>Install Update</button>
                 <div class="progress-bar hidden" id="ota-progress-bar">
                     <div class="progress-fill" id="ota-progress-fill"></div>
@@ -313,4 +379,5 @@
 
     <script src="app.js"></script>
 </body>
+
 </html>

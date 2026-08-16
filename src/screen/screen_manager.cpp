@@ -1,4 +1,4 @@
-#include "screen_manager.h"
+#include "screen/screen_manager.h"
 #include "config.h"
 
 // =============================================================
@@ -47,14 +47,12 @@ void ScreenManager::update(uint32_t deltaMs) {
             // In emotion mode: switch to clock after interval
             if (_autoSwitchTimer >= _switchIntervalMs) {
                 _autoSwitchTimer = 0;
-                _autoSwitchedToClock = true;
                 setEngine(ActiveEngine::CLOCK);
             }
-        } else if (_autoSwitchedToClock) {
-            // Auto-switched to clock: return to emotion after duration
+        } else {
+            // In clock mode: return to emotion after duration
             if (_autoSwitchTimer >= _clockDurationMs) {
                 _autoSwitchTimer = 0;
-                _autoSwitchedToClock = false;
                 setEngine(ActiveEngine::EMOTION);
             }
         }
@@ -89,18 +87,20 @@ void ScreenManager::switchEngine() {
     }
     // Manual switch resets auto-switch timer
     _autoSwitchTimer = 0;
-    _autoSwitchedToClock = false;
 }
 
 void ScreenManager::setEngine(ActiveEngine engine) {
     if (engine == _active && !_inTransition) return;
 
     _active = engine;
+    if (_active == ActiveEngine::CLOCK && _clock) {
+        _clock->resetView();
+    }
+
     _inTransition = true;
     _transitionTimer = 0;
     _transitionDir = (engine == ActiveEngine::CLOCK) ? -1 : 1;
     _autoSwitchTimer = 0;
-    _autoSwitchedToClock = false;
 }
 
 ActiveEngine ScreenManager::getActiveEngine() const {
@@ -114,15 +114,20 @@ void ScreenManager::setAutoSwitch(bool enabled) {
 
 void ScreenManager::resetAutoSwitchTimer() {
     _autoSwitchTimer = 0;
-    _autoSwitchedToClock = false;
 }
 
 void ScreenManager::setAutoSwitchInterval(uint16_t seconds) {
     _switchIntervalMs = (uint32_t)seconds * 1000;
+    if (_active == ActiveEngine::EMOTION) {
+        _autoSwitchTimer = 0;
+    }
 }
 
 void ScreenManager::setClockDuration(uint16_t seconds) {
     _clockDurationMs = (uint32_t)seconds * 1000;
+    if (_active == ActiveEngine::CLOCK) {
+        _autoSwitchTimer = 0;
+    }
 }
 
 uint32_t ScreenManager::getFrameInterval() const {
@@ -139,4 +144,14 @@ EmotionEngine* ScreenManager::emotionEngine() {
 
 ClockEngine* ScreenManager::clockEngine() {
     return _clock;
+}
+
+uint32_t ScreenManager::getRemainingTime() const {
+    if (!_autoSwitch) return 999999;
+    
+    if (_active == ActiveEngine::EMOTION) {
+        return _switchIntervalMs > _autoSwitchTimer ? _switchIntervalMs - _autoSwitchTimer : 0;
+    } else {
+        return _clockDurationMs > _autoSwitchTimer ? _clockDurationMs - _autoSwitchTimer : 0;
+    }
 }

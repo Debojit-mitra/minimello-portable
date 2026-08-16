@@ -4,20 +4,25 @@
 #include <Arduino.h>
 #include <Fonts/FreeSansBold12pt7b.h>
 #include <Wire.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
 
-#include "clock_engine.h"
+#include "clock/clock_engine.h"
 #include "config.h"
-#include "config_manager.h"
-#include "emotion_engine.h"
+#include "config/config_manager.h"
+#include "emotion/emotion_engine.h"
 #include "logger.h"
-#include "network_manager.h"
-#include "ota_manager.h"
-#include "power_manager.h"
-#include "screen_manager.h"
-#include "touch_manager.h"
+#include "network/network_manager.h"
+#include "ota/ota_manager.h"
+#include "power/power_manager.h"
+#include "screen/screen_manager.h"
+#include "server/web_server.h"
+#include "touch/touch_manager.h"
+#include "ui/boot_animation.h"
+#include "ui/ui_components.h"
+#include "ui/greeting.h"
 #include "version.h"
-#include "weather_service.h"
-#include "web_server.h"
+#include "weather/weather_service.h"
 #include <WiFi.h>
 
 // =============================================================
@@ -46,66 +51,7 @@ uint32_t lastInteractionMs =
 bool isScreenSleeping = false;
 
 // =============================================================
-// Boot Animation
-// =============================================================
-
-void drawBootSplash() {
-  display.clearDisplay();
-
-  // "MiniMello" branding with custom font
-  display.setFont(&FreeSansBold12pt7b);
-  display.setTextSize(1);
-  display.setTextColor(DISPLAY_WHITE);
-
-  // Center the text
-  int16_t tbx, tby;
-  uint16_t tbw, tbh;
-  display.getTextBounds(FIRMWARE_NAME, 0, 0, &tbx, &tby, &tbw, &tbh);
-  int16_t tx = (SCREEN_WIDTH - tbw) / 2 - tbx;
-  int16_t ty = 24; // Baseline for 12pt font
-
-  display.setCursor(tx, ty);
-  display.print(FIRMWARE_NAME);
-
-  // Version text below (smooth U8g2 font)
-  char verBuf[16];
-  snprintf(verBuf, sizeof(verBuf), "v%s", FIRMWARE_VERSION);
-  u8g2Fonts.setFont(FONT_SMALL);
-  int16_t vbw = u8g2Fonts.getUTF8Width(verBuf);
-  u8g2Fonts.setCursor((SCREEN_WIDTH - vbw) / 2, 38);
-  u8g2Fonts.print(verBuf);
-
-  display.display();
-}
-
-void drawBootProgress(uint8_t step, uint8_t totalSteps, const char *label) {
-  // Progress bar area
-  int16_t barX = 14;
-  int16_t barY = 42;
-  int16_t barW = 100;
-  int16_t barH = 8;
-
-  // Clear progress area only
-  display.fillRect(0, 38, SCREEN_WIDTH, 26, DISPLAY_BLACK);
-
-  // Progress bar outline
-  display.drawRoundRect(barX, barY, barW, barH, 3, DISPLAY_WHITE);
-
-  // Progress bar fill
-  int16_t fillW = (int16_t)((barW - 4) * step / totalSteps);
-  if (fillW > 0) {
-    display.fillRoundRect(barX + 2, barY + 2, fillW, barH - 4, 2,
-                          DISPLAY_WHITE);
-  }
-
-  // Label below progress bar (smooth U8g2 font)
-  u8g2Fonts.setFont(FONT_MEDIUM);
-  int16_t lbw = u8g2Fonts.getUTF8Width(label);
-  u8g2Fonts.setCursor((SCREEN_WIDTH - lbw) / 2, 62);
-  u8g2Fonts.print(label);
-
-  display.display();
-}
+// Boot animation is handled in ui/boot_animation.cpp
 
 void drawOtaProgress(int percent) {
   // Clear entire screen for clean OTA mode
@@ -134,13 +80,8 @@ void drawOtaProgress(int percent) {
   int16_t lbw = u8g2Fonts.getUTF8Width(label);
   u8g2Fonts.setCursor((SCREEN_WIDTH - lbw) / 2, barY + barH + 16);
   u8g2Fonts.print(label);
-
   display.display();
 }
-
-// =============================================================
-// Touch Event Handler
-// =============================================================
 
 void onTouchEvent(TouchEvent event) {
   lastInteractionMs = millis();     // Reset idle timer on any touch
@@ -193,9 +134,16 @@ void onTouchEvent(TouchEvent event) {
 // Setup
 // =============================================================
 
+bool g_isSetupMode = false;
+
 void setup() {
   Serial.begin(115200);
   LOG_I("SYSTEM", "MiniMello Booting...");
+
+  // --- Load config first so we know if we're in setup mode ---
+  configMgr.begin();
+  g_isSetupMode = (configMgr.wifiSSID.length() == 0);
+  delay(100);
 
   // --- Step 0: Display init ---
   Wire.begin(PIN_SDA, PIN_SCL);
@@ -217,13 +165,12 @@ void setup() {
   u8g2Fonts.setForegroundColor(DISPLAY_WHITE);
 
   // --- Boot splash ---
-  drawBootSplash();
-  delay(BOOT_SPLASH_DURATION_MS);
+  playBootAnimation();
+  // delay(BOOT_SPLASH_DURATION_MS); // Now handled by the animation itself
 
   // --- Step 1: Config ---
   drawBootProgress(1, BOOT_PROGRESS_STEPS, "Loading config...");
-  configMgr.begin();
-  delay(100);
+  // configMgr.begin(); -> Moved to very top!
 
   // --- Step 2: Battery ---
 #if ENABLE_BATTERY_MODULE
@@ -258,7 +205,11 @@ void setup() {
   delay(100);
 
   // --- Step 5: WiFi ---
-  drawBootProgress(5, BOOT_PROGRESS_STEPS, "Connecting WiFi...");
+  if (configMgr.wifiSSID.length() > 0) {
+    drawBootProgress(5, BOOT_PROGRESS_STEPS, "Connecting WiFi...");
+  } else {
+    drawBootProgress(5, BOOT_PROGRESS_STEPS, "Starting hotspot...");
+  }
   LOG_I("WIFI", "SSID from config: '%s'", configMgr.wifiSSID.c_str());
   networkMgr.begin(configMgr.wifiSSID, configMgr.wifiPass, configMgr.tzOffset);
 
@@ -275,16 +226,45 @@ void setup() {
   LOG_I("WIFI", "Final state: %d", (int)networkMgr.getState());
 
   // --- Step 6: Web Server ---
-  drawBootProgress(6, BOOT_PROGRESS_STEPS, "Web server...");
+  if (networkMgr.getState() == NetState::AP_MODE) {
+    drawBootProgress(6, BOOT_PROGRESS_STEPS, "Preparing setup...");
+  } else {
+    drawBootProgress(6, BOOT_PROGRESS_STEPS, "Web server...");
+  }
   webServer.begin(&configMgr, &screenMgr, &powerMgr, &networkMgr);
   if (networkMgr.getState() == NetState::AP_MODE) {
     webServer.enableCaptivePortal();
   }
   delay(100);
 
+
+  // If we are in AP mode, stay in the setup screen until connected!
+  if (networkMgr.getState() == NetState::AP_MODE) {
+    runSetupScreen(display, networkMgr, webServer, touchMgr);
+  }
+
   // --- Step 7: Weather ---
   drawBootProgress(7, BOOT_PROGRESS_STEPS, "Weather data...");
-  weatherSvc.begin(configMgr.weatherApiKey, configMgr.weatherCity);
+  
+  if (configMgr.weatherCity.isEmpty() && networkMgr.isConnected()) {
+      drawBootProgress(7, BOOT_PROGRESS_STEPS, "Locating...");
+      HTTPClient http;
+      http.begin("http://ip-api.com/json/");
+      http.setTimeout(4000);
+      if (http.GET() == HTTP_CODE_OK) {
+          JsonDocument doc;
+          if (!deserializeJson(doc, http.getString())) {
+              configMgr.weatherLat = doc["lat"].as<float>();
+              configMgr.weatherLon = doc["lon"].as<float>();
+              configMgr.weatherCity = doc["city"].as<String>();
+              configMgr.save(); // Save to NVS
+              LOG_I("SYSTEM", "Auto-detected location: %s", configMgr.weatherCity.c_str());
+          }
+      }
+      http.end();
+  }
+
+  weatherSvc.begin(configMgr.weatherLat, configMgr.weatherLon, configMgr.weatherCity);
   delay(100);
 
   // --- Step 8: OTA ---
@@ -303,6 +283,16 @@ void setup() {
   lastSlowUpdateMs = millis();
   lastInteractionMs = millis(); // Don't trigger idle sleep immediately
   LOG_I("SYSTEM", "MiniMello Ready");
+
+  // --- Greeting animation (cold boot only) ---
+  if (millis() < 30000) {
+    int greetHour = -1;
+    struct tm timeinfo;
+    if (networkMgr.isTimeSynced() && networkMgr.getLocalTime(timeinfo)) {
+      greetHour = timeinfo.tm_hour;
+    }
+    playGreeting(display, emotionEngine, configMgr.userName, greetHour);
+  }
 
   // Check wakeup reason
   if (powerMgr.wasWokenByTouch()) {
@@ -331,7 +321,7 @@ void loop() {
   // --- Apply weather credentials when changed via WebUI ---
   if (configMgr.weatherChanged) {
     configMgr.weatherChanged = false;
-    weatherSvc.setCredentials(configMgr.weatherApiKey, configMgr.weatherCity);
+    weatherSvc.setCredentials(configMgr.weatherLat, configMgr.weatherLon, configMgr.weatherCity);
   }
 
   // --- Slow updates (every 1 second) ---
@@ -455,6 +445,8 @@ void loop() {
   uint32_t frameInterval = screenMgr.getFrameInterval();
   uint32_t deltaMs = now - lastFrameMs;
 
+  webServer.update();
+
   // --- Render frame ---
   if (!isScreenSleeping && deltaMs >= frameInterval) {
     lastFrameMs = now;
@@ -469,6 +461,14 @@ void loop() {
     // Render
     display.clearDisplay();
     screenMgr.render(display);
+
+    // Overlay Reboot Warning
+    uint32_t holdTime = touchMgr.getHoldTimeMs();
+    if (holdTime > 3000) {
+      uint8_t progress = (holdTime - 3000) * 100 / (TOUCH_VERY_LONG_PRESS_MS - 3000);
+      UIComponents::drawRestartWarning(display, progress, true);
+    }
+
     display.display();
   }
 

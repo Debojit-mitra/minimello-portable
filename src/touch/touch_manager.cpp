@@ -1,4 +1,4 @@
-#include "touch_manager.h"
+#include "touch/touch_manager.h"
 #include "config.h"
 
 // =============================================================
@@ -102,6 +102,13 @@ bool TouchManager::isTouched() const {
 
 bool TouchManager::isLongPressing() const {
     return _currentState && _longPressTriggered;
+}
+
+uint32_t TouchManager::getHoldTimeMs() const {
+    if (_currentState) {
+        return millis() - _pressStartMs;
+    }
+    return 0;
 }
 
 void TouchManager::emit(TouchEvent event) {

@@ -2,8 +2,8 @@
 
 #include <Arduino.h>
 #include "display_config.h"
-#include "emotion_engine.h"
-#include "clock_engine.h"
+#include "emotion/emotion_engine.h"
+#include "clock/clock_engine.h"
 
 // =============================================================
 // ScreenManager — Engine orchestrator
@@ -35,6 +35,9 @@ public:
 
     // Get frame interval from active engine
     uint32_t getFrameInterval() const;
+    
+    // Get remaining time before next auto-switch (in milliseconds)
+    uint32_t getRemainingTime() const;
 
     // Access to engines
     EmotionEngine* emotionEngine();
@@ -50,7 +53,6 @@ private:
     uint32_t _switchIntervalMs = 30000;
     uint32_t _clockDurationMs = 10000;
     uint32_t _autoSwitchTimer = 0;
-    bool     _autoSwitchedToClock = false; // track if current clock is auto-switch
 
     // Transition animation
     bool     _inTransition = false;

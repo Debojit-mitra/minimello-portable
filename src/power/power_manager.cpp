@@ -1,4 +1,4 @@
-#include "power_manager.h"
+#include "power/power_manager.h"
 #include "config.h"
 #include <esp_sleep.h>
 #include <driver/gpio.h>

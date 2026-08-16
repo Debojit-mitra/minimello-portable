@@ -1,0 +1,23 @@
+#pragma once
+
+// =============================================================
+// Minimello Portable — Debug Mode Configuration
+// =============================================================
+// When DEBUG_MODE is defined in platformio.ini build_flags,
+// these values are used as defaults instead of requiring WebUI
+// setup. You can still override them via WebUI at runtime.
+//
+// To use this file: 
+// 1. Rename it to `debug_config.h` (it is ignored by git)
+// 2. Fill in your WiFi and location details below.
+// 3. Uncomment "-DDEBUG_MODE" in platformio.ini
+// =============================================================
+
+#ifdef DEBUG_MODE
+
+#define DEBUG_WIFI_SSID "YOUR_WIFI_SSID"
+#define DEBUG_WIFI_PASS "YOUR_WIFI_PASSWORD"
+#define DEBUG_WEATHER_CITY "YOUR_CITY_NAME"
+#define DEBUG_TZ_OFFSET 0 // UTC offset in seconds (e.g., 19800 for +5:30)
+
+#endif

@@ -158,11 +158,27 @@ async function refreshStatus() {
 
     // Force redirect to WiFi tab if not connected and on a hidden tab
     if (!s.wifi_connected) {
+        document.getElementById('ota-card').style.display = 'none';
+        
         const activeTab = document.querySelector('.tab.active');
         if (activeTab && activeTab.dataset.tab !== 'wifi' && activeTab.dataset.tab !== 'system') {
             document.querySelector('.tab[data-tab="wifi"]').click();
         }
+        
+        // Auto-trigger scan if it hasn't been triggered yet
+        if (!window._autoScanTriggered) {
+            window._autoScanTriggered = true;
+            triggerWifiScan();
+        }
+    } else {
+        document.getElementById('ota-card').style.display = '';
     }
+
+    // Hide first-time setup specific UI (nickname, note) in normal mode
+    const nicknameGroup = document.getElementById('setup-nickname-group');
+    const completionNote = document.getElementById('setup-completion-note');
+    if (nicknameGroup) nicknameGroup.style.display = !s.wifi_connected ? '' : 'none';
+    if (completionNote) completionNote.style.display = !s.wifi_connected ? '' : 'none';
 }
 
 function formatUptime(s) {
@@ -194,7 +210,10 @@ async function refreshConfig() {
     document.getElementById('auto-switch').checked = c.auto_switch;
     document.getElementById('switch-interval').value = c.switch_interval;
     document.getElementById('clock-duration').value = c.clock_duration;
+    document.getElementById('oled-protection').checked = c.oled_protection;
     document.getElementById('default-engine').value = c.default_engine;
+    
+    checkOLEDProtectionState();
 
     const brightPct = Math.round(c.brightness * 100 / 255);
     document.getElementById('brightness').value = brightPct;
@@ -229,12 +248,19 @@ async function refreshConfig() {
     document.getElementById('night-start').value = c.night_start;
     document.getElementById('night-end').value = c.night_end;
     document.getElementById('weather-city').value = c.weather_city || '';
-    document.getElementById('weather-key').value = c.weather_key_set ? '••••••••' : '';
+    document.getElementById('weather-city-display').textContent = c.weather_city || 'Unknown';
+    document.getElementById('weather-lat').value = c.weather_lat || 0;
+    document.getElementById('weather-lon').value = c.weather_lon || 0;
 
     if (c.mood_interval !== undefined) {
         document.getElementById('mood-interval').value = c.mood_interval;
         document.getElementById('mood-interval-val').textContent = c.mood_interval + 's';
     }
+
+    // Populate nickname fields (WiFi tab + Settings tab)
+    const name = c.user_name || '';
+    document.getElementById('user-name').value = name;
+    document.getElementById('settings-user-name').value = name;
 }
 
 // --- Emotion Cards ---
@@ -260,9 +286,14 @@ document.getElementById('btn-switch').addEventListener('click', async () => {
 });
 
 // --- WiFi ---
-document.getElementById('btn-scan').addEventListener('click', async () => {
+async function triggerWifiScan() {
     const listEl = document.getElementById('wifi-networks');
-    listEl.innerHTML = '<p class="muted">Scanning networks...</p>';
+    listEl.innerHTML = `
+        <div class="scan-progress-container">
+            <p class="muted" style="margin-bottom: 8px;">Scanning networks...</p>
+            <div class="progress-bar-linear"></div>
+        </div>
+    `;
 
     await apiGet('/api/wifi/scan');
 
@@ -286,13 +317,21 @@ document.getElementById('btn-scan').addEventListener('click', async () => {
             });
             listEl.appendChild(item);
         });
-    }, 3000);
-});
+    }, 4000);
+}
+
+document.getElementById('btn-scan').addEventListener('click', triggerWifiScan);
 
 document.getElementById('btn-wifi-save').addEventListener('click', async () => {
     const ssid = document.getElementById('wifi-ssid').value;
     const pass = document.getElementById('wifi-pass').value;
     if (!ssid) return;
+
+    // Save nickname alongside WiFi credentials
+    const userName = document.getElementById('user-name').value.trim();
+    if (userName) {
+        await apiPost('/api/config', { user_name: userName });
+    }
 
     const wifiDetail = document.getElementById('wifi-status-detail');
     wifiDetail.innerHTML = 'Connecting to <strong>' + ssid + '</strong>...';
@@ -319,7 +358,6 @@ function setupPasswordToggle(inputId, toggleId) {
 }
 
 setupPasswordToggle('wifi-pass', 'wifi-pass-toggle');
-setupPasswordToggle('weather-key', 'weather-key-toggle');
 
 // --- Display Settings ---
 document.getElementById('brightness').addEventListener('input', (e) => {
@@ -336,9 +374,92 @@ document.getElementById('btn-display-save').addEventListener('click', async () =
         switch_interval: parseInt(document.getElementById('switch-interval').value),
         clock_duration: parseInt(document.getElementById('clock-duration').value),
         default_engine: parseInt(document.getElementById('default-engine').value),
+        oled_protection: document.getElementById('oled-protection').checked,
         brightness: Math.round(parseInt(document.getElementById('brightness').value) * 255 / 100)
     });
     showToast('Display settings saved!');
+});
+
+// --- Weather Setup ---
+document.getElementById('btn-weather-auto').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-weather-auto');
+    const oldText = btn.textContent;
+    btn.textContent = '⏳ Detecting...';
+    btn.disabled = true;
+
+    try {
+        const resp = await fetch('http://ip-api.com/json/');
+        const data = await resp.json();
+        
+        if (data.status === 'success') {
+            document.getElementById('weather-lat').value = data.lat;
+            document.getElementById('weather-lon').value = data.lon;
+            const shortCity = data.city;
+            document.getElementById('weather-city').value = shortCity;
+            document.getElementById('weather-city-display').textContent = shortCity;
+            showToast(`Location found: ${shortCity}`);
+        } else {
+            showToast('Failed to detect location.', 'error');
+        }
+    } catch (err) {
+        showToast('Error connecting to location service.', 'error');
+    }
+    
+    btn.textContent = oldText;
+    btn.disabled = false;
+});
+
+document.getElementById('btn-weather-search').addEventListener('click', async () => {
+    const query = document.getElementById('weather-city-search').value;
+    if (!query) return;
+
+    const btn = document.getElementById('btn-weather-search');
+    btn.textContent = '⏳';
+    btn.disabled = true;
+
+    const resDiv = document.getElementById('weather-search-results');
+    resDiv.innerHTML = '';
+    resDiv.style.display = 'block';
+
+    try {
+        const resp = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`);
+        const data = await resp.json();
+
+        if (data.results && data.results.length > 0) {
+            data.results.forEach(res => {
+                const item = document.createElement('div');
+                item.style.padding = '8px 12px';
+                item.style.borderBottom = '1px solid var(--border)';
+                item.style.cursor = 'pointer';
+                const locationName = `${res.name}, ${res.admin1 ? res.admin1 + ', ' : ''}${res.country_code}`;
+                item.textContent = locationName;
+                
+                item.addEventListener('click', () => {
+                    document.getElementById('weather-lat').value = res.latitude;
+                    document.getElementById('weather-lon').value = res.longitude;
+                    document.getElementById('weather-city').value = res.name; // Only save the short name for the OLED
+                    document.getElementById('weather-city-display').textContent = locationName; // Show full name in UI
+                    resDiv.style.display = 'none';
+                    document.getElementById('weather-city-search').value = '';
+                    showToast(`Selected: ${res.name}`);
+                });
+
+                item.addEventListener('mouseover', () => item.style.background = 'var(--surface-hover)');
+                item.addEventListener('mouseout', () => item.style.background = 'transparent');
+                
+                resDiv.appendChild(item);
+            });
+        } else {
+            resDiv.innerHTML = '<div style="padding: 8px 12px; color: var(--text-muted);">No results found.</div>';
+            setTimeout(() => { resDiv.style.display = 'none'; }, 2000);
+        }
+    } catch (err) {
+        showToast('Search failed.', 'error');
+        resDiv.style.display = 'none';
+    }
+
+    btn.textContent = 'Search';
+    btn.disabled = false;
 });
 
 // --- Settings ---
@@ -349,14 +470,11 @@ document.getElementById('btn-settings-save').addEventListener('click', async () 
         night_start: parseInt(document.getElementById('night-start').value),
         night_end: parseInt(document.getElementById('night-end').value),
         weather_city: document.getElementById('weather-city').value,
-        mood_interval: parseInt(document.getElementById('mood-interval').value)
+        weather_lat: parseFloat(document.getElementById('weather-lat').value),
+        weather_lon: parseFloat(document.getElementById('weather-lon').value),
+        mood_interval: parseInt(document.getElementById('mood-interval').value),
+        user_name: document.getElementById('settings-user-name').value.trim()
     };
-
-    // Only send weather key if it was actually changed
-    const keyInput = document.getElementById('weather-key').value;
-    if (keyInput && !keyInput.startsWith('••')) {
-        data.weather_key = keyInput;
-    }
 
     await apiPost('/api/config', data);
     showToast('Settings saved!');
@@ -449,3 +567,26 @@ refreshConfig();
 
 // Auto-refresh every 5 seconds
 setInterval(refreshStatus, 5000);
+
+// --- OLED Protection UI Logic ---
+function checkOLEDProtectionState() {
+    const autoSwitch = document.getElementById('auto-switch').checked;
+    const clockDur = parseInt(document.getElementById('clock-duration').value) || 0;
+    const switchInt = parseInt(document.getElementById('switch-interval').value) || 0;
+    const oledToggle = document.getElementById('oled-protection');
+
+    if (!autoSwitch || clockDur >= 60 || switchInt >= 60) {
+        // Forced
+        oledToggle.checked = true;
+        oledToggle.disabled = true;
+        oledToggle.parentElement.style.opacity = '0.7';
+    } else {
+        // Optional
+        oledToggle.disabled = false;
+        oledToggle.parentElement.style.opacity = '1';
+    }
+}
+
+document.getElementById('auto-switch').addEventListener('change', checkOLEDProtectionState);
+document.getElementById('clock-duration').addEventListener('input', checkOLEDProtectionState);
+document.getElementById('switch-interval').addEventListener('input', checkOLEDProtectionState);

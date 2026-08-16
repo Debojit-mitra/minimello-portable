@@ -1,4 +1,4 @@
-#include "ota_manager.h"
+#include "ota/ota_manager.h"
 #include "config.h"
 #include "logger.h"
 #include "version.h"

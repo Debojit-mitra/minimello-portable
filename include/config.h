@@ -62,18 +62,19 @@
 
 // --- Network ---
 #define WIFI_AP_PREFIX "Minimello-"
+#define WIFI_AP_PASSWORD "minimello" // Setup AP password (shown on screen)
 #define WIFI_CONNECT_TIMEOUT_MS 15000 // WiFi connection timeout
 #define NTP_SERVER "pool.ntp.org"
 #define NTP_SYNC_INTERVAL_MS (6ULL * 3600 * 1000) // Resync every 6 hours
 #define DEFAULT_TZ_OFFSET 19800                   // IST (+5:30) in seconds
 
 // --- Weather ---
-#define WEATHER_REFRESH_MS (30UL * 60 * 1000) // Refresh every 30 minutes
-#define WEATHER_API_BASE "http://api.openweathermap.org/data/2.5/weather"
+#define WEATHER_REFRESH_MS 1800000 // 30 minutes
+#define WEATHER_API_BASE "http://api.open-meteo.com/v1/forecast"
 
 // --- OTA ---
 #define OTA_GITHUB_OWNER "Debojit-mitra"
-#define OTA_GITHUB_REPO "minimello-portable"
+#define OTA_GITHUB_REPO "minimello-portable-releases"
 #define OTA_CHECK_INTERVAL_MS (6ULL * 3600 * 1000) // Check every 6 hours
 #define OTA_API_URL                                                            \
   "https://api.github.com/repos/" OTA_GITHUB_OWNER "/" OTA_GITHUB_REPO         \

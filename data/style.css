@@ -717,8 +717,8 @@ body {
 .toast {
     position: fixed;
     bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%) translateY(100px);
+    right: 30px;
+    transform: translateY(100px);
     background: var(--surface-alt);
     color: var(--text);
     padding: 12px 24px;
@@ -734,7 +734,7 @@ body {
 }
 
 .toast.show {
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
     opacity: 1;
 }
 
@@ -811,4 +811,32 @@ body {
     margin: 0;
     padding: 8px 16px;
     min-height: auto;
+}
+/* --- Linear Progress Bar --- */
+.scan-progress-container {
+    padding: 16px;
+    text-align: center;
+}
+.progress-bar-linear {
+    width: 100%;
+    height: 6px;
+    background-color: var(--surface-hover);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+}
+.progress-bar-linear::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 30%;
+    background-color: var(--primary);
+    border-radius: 3px;
+    animation: progress-slide 1.2s infinite ease-in-out;
+}
+@keyframes progress-slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(330%); }
 }

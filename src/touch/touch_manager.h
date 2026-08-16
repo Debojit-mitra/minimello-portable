@@ -29,6 +29,7 @@ public:
 
     bool isTouched() const;
     bool isLongPressing() const;
+    uint32_t getHoldTimeMs() const;
 
 private:
     uint8_t         _pin = 0;

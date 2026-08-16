@@ -2,6 +2,9 @@
 
 #include <Arduino.h>
 #include "display_config.h"
+#include <U8g2_for_Adafruit_GFX.h>
+
+extern U8G2_FOR_ADAFRUIT_GFX u8g2Fonts;
 
 // =============================================================
 // ClockEngine — Multi-face clock display
@@ -54,6 +57,7 @@ public:
 
     // Sub-screen control (Time vs Weather)
     void toggleSubScreen();
+    void resetView();
 
     // Data setters (called by main loop with fresh data)
     void setTime(uint8_t hour, uint8_t minute, uint8_t second);
@@ -88,6 +92,12 @@ private:
     String   _ipAddress = "0.0.0.0";
     uint32_t _infoToggleMs = 0;
     bool     _showIP = false;
+
+    // Pixel Shifting
+    int8_t   _pixelShiftX = 0;
+    int8_t   _pixelShiftY = 0;
+    uint32_t _shiftTimerMs = 0;
+    uint8_t  _shiftIndex = 0;
 
     // Render functions per face
     void renderDigital(DisplayType& d);

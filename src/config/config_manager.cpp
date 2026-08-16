@@ -1,4 +1,4 @@
-#include "config_manager.h"
+#include "config/config_manager.h"
 #include "config.h"
 #include "debug_config.h"
 
@@ -19,12 +19,15 @@ void ConfigManager::begin() {
     autoSwitch      = prefs.getBool("auto_switch", true);
     switchIntervalS = prefs.getUShort("switch_int", AUTO_SWITCH_INTERVAL_S);
     clockDurationS  = prefs.getUShort("clock_dur", CLOCK_DISPLAY_DURATION_S);
+    oledProtectionEnabled = prefs.getBool("oled_prot", false);
     moodIntervalS   = prefs.getUShort("mood_int", 300);  // Default 5 minutes
     nightStartHour  = prefs.getUChar("night_start", NIGHT_START_HOUR);
     nightEndHour    = prefs.getUChar("night_end", NIGHT_END_HOUR);
     nightModeEnabled= prefs.getBool("night_en", true);
-    weatherApiKey   = prefs.getString("weather_key", "");
+    weatherLat      = prefs.getFloat("weather_lat", 0.0);
+    weatherLon      = prefs.getFloat("weather_lon", 0.0);
     weatherCity     = prefs.getString("weather_city", "");
+    userName        = prefs.getString("user_name", "");
     debugMode       = prefs.getBool("debug_mode", false);
 
     // Apply debug mode overrides if compiled with DEBUG_MODE flag
@@ -33,7 +36,8 @@ void ConfigManager::begin() {
     // Always use debug credentials (override any saved NVS values)
     wifiSSID      = DEBUG_WIFI_SSID;
     wifiPass      = DEBUG_WIFI_PASS;
-    weatherApiKey = DEBUG_WEATHER_API_KEY;
+    weatherLat    = DEBUG_WEATHER_LAT;
+    weatherLon    = DEBUG_WEATHER_LON;
     weatherCity   = DEBUG_WEATHER_CITY;
     tzOffset      = DEBUG_TZ_OFFSET;
 #endif
@@ -49,12 +53,15 @@ void ConfigManager::save() {
     prefs.putBool("auto_switch",    autoSwitch);
     prefs.putUShort("switch_int",   switchIntervalS);
     prefs.putUShort("clock_dur",    clockDurationS);
+    prefs.putBool("oled_prot",      oledProtectionEnabled);
     prefs.putUShort("mood_int",     moodIntervalS);
     prefs.putUChar("night_start",   nightStartHour);
     prefs.putUChar("night_end",     nightEndHour);
     prefs.putBool("night_en",       nightModeEnabled);
-    prefs.putString("weather_key",  weatherApiKey);
+    prefs.putFloat("weather_lat",   weatherLat);
+    prefs.putFloat("weather_lon",   weatherLon);
     prefs.putString("weather_city", weatherCity);
+    prefs.putString("user_name",    userName);
     prefs.putBool("debug_mode",     debugMode);
 }
 
@@ -74,11 +81,14 @@ void ConfigManager::loadDefaults() {
     autoSwitch      = true;
     switchIntervalS = AUTO_SWITCH_INTERVAL_S;
     clockDurationS  = CLOCK_DISPLAY_DURATION_S;
+    oledProtectionEnabled = false;
     moodIntervalS   = 300;
     nightStartHour  = NIGHT_START_HOUR;
     nightEndHour    = NIGHT_END_HOUR;
     nightModeEnabled= true;
-    weatherApiKey   = "";
+    weatherLat      = 0.0;
+    weatherLon      = 0.0;
     weatherCity     = "";
+    userName        = "";
     debugMode       = false;
 }

@@ -3,15 +3,15 @@
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include <DNSServer.h>
-#include "config_manager.h"
-#include "screen_manager.h"
-#include "power_manager.h"
-#include "network_manager.h"
+#include "config/config_manager.h"
+#include "screen/screen_manager.h"
+#include "power/power_manager.h"
+#include "network/network_manager.h"
 
 // =============================================================
 // WebServer — AsyncWebServer + Captive Portal
 // =============================================================
-// Serves the WebUI from LittleFS and provides REST API for
+// Serves the WebUI from PROGMEM (gzipped) and provides REST API for
 // configuration, status, and control.
 
 class MiniWebServer {
@@ -21,6 +21,7 @@ public:
                PowerManager* power,
                NetworkManager* network);
     void enableCaptivePortal();
+    void update();
 
 private:
     AsyncWebServer  _server{80};
