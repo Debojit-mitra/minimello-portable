@@ -228,14 +228,6 @@ void playGreeting(DisplayType& display, EmotionEngine& emotionEngine, const Stri
             int16_t tw = u8g2Fonts.getUTF8Width(showText);
             u8g2Fonts.setCursor((SCREEN_WIDTH - tw) / 2, drawY);
             u8g2Fonts.print(showText);
-
-            if (!hasName && elapsed > slideInEndMs && elapsed < holdEndMs) {
-                u8g2Fonts.setFont(FONT_SMALL);
-                const char* hint = "Set name at minimello.local";
-                int16_t hw = u8g2Fonts.getUTF8Width(hint);
-                u8g2Fonts.setCursor((SCREEN_WIDTH - hw) / 2, drawY - 12);
-                u8g2Fonts.print(hint);
-            }
         }
 
         display.display();
