@@ -6,6 +6,7 @@
 #include <Wire.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <esp_sleep.h>
 
 #include "clock/clock_engine.h"
 #include "config.h"
@@ -50,6 +51,9 @@ uint32_t lastInteractionMs =
     0; // Tracks last touch for night-mode idle detection
 bool isScreenSleeping = false;
 
+// --- Power state tracking ---
+NetState lastWiFiState = NetState::DISCONNECTED; // For CPU frequency scaling
+
 // =============================================================
 // Boot animation is handled in ui/boot_animation.cpp
 
@@ -88,11 +92,20 @@ void onTouchEvent(TouchEvent event) {
   screenMgr.resetAutoSwitchTimer(); // Pause/reset auto-switch timer on any
                                     // touch interaction
 
+#if ENABLE_BATTERY_MODULE && ENABLE_CPU_SCALING
+  // On battery power, instantly boost CPU to 160MHz so UI doesn't lag while waking up
+  if (powerMgr.getPowerSource() == PowerSource::BATTERY) {
+    powerMgr.setCpuFrequency(CPU_FREQ_HIGH);
+  }
+#endif
+
+  networkMgr.requestWiFi();         // Wake WiFi if sleeping (duty cycle)
+
   if (isScreenSleeping) {
     LOG_I("SYSTEM", "Woke from screensaver");
     isScreenSleeping = false;
-    // Restore brightness
-    DISPLAY_SETCONTRAST(display, configMgr.brightness);
+    // Restore display — turn charge pump back on + set brightness
+    powerMgr.displayOn(display, configMgr.brightness);
     return; // Consume touch to just wake up
   }
 
@@ -174,12 +187,16 @@ void setup() {
 
   // --- Step 2: Battery ---
 #if ENABLE_BATTERY_MODULE
-  drawBootProgress(2, BOOT_PROGRESS_STEPS, "Battery check...");
+  drawBootProgress(2, BOOT_PROGRESS_STEPS, "Power system...");
 #endif
-  powerMgr.begin(PIN_BATTERY_ADC); // Must still run to set internal state
+  powerMgr.begin(PIN_BATTERY_ADC, PIN_CHRG); // Must still run to set internal state
 #if ENABLE_BATTERY_MODULE
-  LOG_I("POWER", "Battery: %.2fV (%d%%)", powerMgr.getBatteryVoltage(),
-        powerMgr.getBatteryPercent());
+  if (powerMgr.getPowerSource() == PowerSource::USB_POWERED) {
+    LOG_I("POWER", "USB powered (no battery)");
+  } else {
+    LOG_I("POWER", "Battery: %.2fV (%d%%)", powerMgr.getBatteryVoltage(),
+          powerMgr.getBatteryPercent());
+  }
   delay(100);
 #endif
 
@@ -213,10 +230,10 @@ void setup() {
   LOG_I("WIFI", "SSID from config: '%s'", configMgr.wifiSSID.c_str());
   networkMgr.begin(configMgr.wifiSSID, configMgr.wifiPass, configMgr.tzOffset);
 
-  // Wait for connection (up to 15s during boot)
+  // Wait for connection (up to 3 attempts * 15s during boot)
   uint32_t wifiStart = millis();
   while (networkMgr.getState() == NetState::CONNECTING &&
-         millis() - wifiStart < WIFI_CONNECT_TIMEOUT_MS) {
+         millis() - wifiStart < (WIFI_CONNECT_TIMEOUT_MS * 3)) {
     networkMgr.update(millis());
     if ((millis() - wifiStart) % 2000 < 100) {
       LOG_I("WIFI", "Status: %d", WiFi.status());
@@ -282,6 +299,12 @@ void setup() {
   lastFrameMs = millis();
   lastSlowUpdateMs = millis();
   lastInteractionMs = millis(); // Don't trigger idle sleep immediately
+
+  // Enable WiFi duty cycling after boot sync is complete
+#if WIFI_DUTY_CYCLE
+  networkMgr.enableDutyCycle(true);
+#endif
+
   LOG_I("SYSTEM", "MiniMello Ready");
 
   // --- Greeting animation (cold boot only) ---
@@ -339,6 +362,36 @@ void loop() {
 
     // OTA
     otaMgr.update(now);
+
+    // WiFi duty cycle: wake radio if any service needs connectivity
+#if WIFI_DUTY_CYCLE
+    if (networkMgr.getState() == NetState::WIFI_OFF) {
+      if (weatherSvc.needsWiFi(now) || otaMgr.needsWiFi(now) || networkMgr.needsTimeSync(now)) {
+        networkMgr.requestWiFi();
+      }
+    }
+#endif
+    // CPU frequency scaling: drop to 80MHz when WiFi radio is off
+    // Smart scaling: We apply scaling on BATTERY and CHARGING. 
+    // The TP4056 Type-C port is power-only, so we don't need to lock to 160MHz to protect USB-CDC 
+    // (unless running purely in USB_POWERED mode during bare-board development).
+#if ENABLE_BATTERY_MODULE && ENABLE_CPU_SCALING
+    PowerSource pwrSrc = powerMgr.getPowerSource();
+    if (pwrSrc == PowerSource::BATTERY || pwrSrc == PowerSource::CHARGING) {
+      NetState currentWiFiState = networkMgr.getState();
+      if (currentWiFiState != lastWiFiState) {
+        if (currentWiFiState == NetState::WIFI_OFF) {
+          powerMgr.setCpuFrequency(CPU_FREQ_LOW);
+        } else if (lastWiFiState == NetState::WIFI_OFF) {
+          powerMgr.setCpuFrequency(CPU_FREQ_HIGH);
+        }
+        lastWiFiState = currentWiFiState;
+      }
+    } else {
+      // USB_POWERED (no battery) - lock to 160MHz for raw development / CDC stability
+      powerMgr.setCpuFrequency(CPU_FREQ_HIGH);
+    }
+#endif
 
     // Update clock data
     struct tm timeinfo;
@@ -401,18 +454,25 @@ void loop() {
           display.display();
 
 #if ENABLE_BATTERY_MODULE
+          // Shut down OLED charge pump before deep sleep (saves ~15mA)
+          powerMgr.displayOff(display);
           powerMgr.enterDeepSleep(NIGHT_WAKE_CHECK_US);
 #else
           // Soft sleep for USB power (keeps WiFi and OTA alive)
-          DISPLAY_SETCONTRAST(display, 0); // Hardware display off
+          // Turn off OLED charge pump entirely instead of just dimming
+          powerMgr.displayOff(display);
           isScreenSleeping = true;
 #endif
         }
       }
     }
     // Update clock with battery/wifi/ip status
-    clockEngine.setBattery(powerMgr.getBatteryPercent(), false);
-    clockEngine.setWiFi(networkMgr.isConnected(), networkMgr.getRSSI());
+    if (clockEngine.setBattery(powerMgr.getBatteryPercent(), powerMgr.getPowerSource())) {
+      screenMgr.setEngine(ActiveEngine::CLOCK);
+      clockEngine.showChargingScreen();
+      screenMgr.resetAutoSwitchTimer();
+    }
+    clockEngine.setWiFi(networkMgr.getState(), networkMgr.getRSSI());
     clockEngine.setIP(networkMgr.getIP());
     clockEngine.setWeather(weatherSvc.getData());
 
@@ -436,6 +496,7 @@ void loop() {
       delay(2000);
       display.clearDisplay();
       display.display();
+      powerMgr.displayOff(display);    // Shut down OLED charge pump
       powerMgr.enterDeepSleep(0); // Sleep until touch
     }
 #endif
@@ -471,6 +532,21 @@ void loop() {
 
     display.display();
   }
+
+  // --- Light sleep between frames (battery mode only) ---
+  // When no rendering is due, put the CPU into automatic light sleep.
+  // Smart sleep: ONLY sleep if running purely on battery. Light sleep on the 
+  // ESP32-C3 drops the USB clock and will crash the serial monitor otherwise!
+#if ENABLE_BATTERY_MODULE && ENABLE_LIGHT_SLEEP
+  if (!isScreenSleeping && powerMgr.getPowerSource() == PowerSource::BATTERY) {
+    uint32_t nextFrameIn = frameInterval - (millis() - lastFrameMs);
+    // Only sleep if we have >5ms until next frame (avoid thrashing)
+    if (nextFrameIn > 5 && nextFrameIn < frameInterval) {
+      esp_sleep_enable_timer_wakeup(nextFrameIn * 1000ULL); // µs
+      esp_light_sleep_start();
+    }
+  }
+#endif
 
   yield(); // Feed watchdog, let WiFi stack run
 }

@@ -192,7 +192,8 @@ function formatUptime(s) {
 
 function getEmotionIndex(name) {
     const map = { 'Neutral': 0, 'Happy': 1, 'Sad': 2, 'Angry': 3,
-                  'Surprised': 4, 'Sleepy': 5, 'Love': 6, 'Wink': 7 };
+                  'Surprised': 4, 'Sleepy': 5, 'Love': 6, 'Wink': 7,
+                  'Joyful': 8, 'Excited': 9, 'Starstruck': 10, 'Playful Love': 11 };
     return map[name] ?? -1;
 }
 

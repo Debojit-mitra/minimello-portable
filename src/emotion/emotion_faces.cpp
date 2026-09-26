@@ -7,7 +7,7 @@
 FaceParams EmotionEngine::getEmotionParams(Emotion e) {
     FaceParams p;
     // Common defaults
-    p.eyeW = 13;  p.eyeH = 16;
+    p.eyeW = 11;  p.eyeH = 13;
     p.eyeLX = 40; p.eyeLY = 25;
     p.eyeRX = 88; p.eyeRY = 25;
     p.pupilR = 4;
@@ -25,6 +25,9 @@ FaceParams EmotionEngine::getEmotionParams(Emotion e) {
     p.heartEyes = false;
     p.arcEyes = false;
     p.winkLeft = false;
+    p.squeezeEyes = false;
+    p.winkRightSqueeze = false;
+    p.happyMarks = false;
 
     switch (e) {
         case Emotion::NEUTRAL:
@@ -34,56 +37,50 @@ FaceParams EmotionEngine::getEmotionParams(Emotion e) {
             break;
 
         case Emotion::HAPPY:
-            // Classic ^_^ kawaii happy — arc eyes, big smile, blush, bounce
+            // Classic ^_^ kawaii happy — arc eyes, normal smile, blush, bounce
             p.arcEyes = true;
             p.eyeLY = 27;
             p.eyeRY = 27;
-            p.mouthCurve = 10;   // Big wide smile
-            p.mouthW = 16;
+            p.mouthCurve = 5;    // Normal wide smile
+            p.mouthOpenH = 0;
+            p.mouthW = 9;
             p.blushR = 5;
             p.bounce = -2;       // Upward bounce
             break;
 
         case Emotion::SAD:
             // Droopy eyes tilted inward at top, big visible frown, no brows
-            p.eyeW = 12;
-            p.eyeH = 14;
+            p.eyeW = 10;
+            p.eyeH = 12;
             p.eyeLX = 42;  p.eyeLY = 28;
             p.eyeRX = 86;  p.eyeRY = 28;
             p.pupilR = 3;
             p.pupilOY = 3;        // Looking down
-            p.mouthCurve = -8;    // Clear frown
-            p.mouthW = 12;
+            p.mouthCurve = -4;    // Subtle frown
+            p.mouthW = 9;         // Shorter mouth
             p.mouthY = 50;
             p.bounce = 3;         // Droopy
             break;
 
         case Emotion::ANGRY:
-            // Narrow eyes with thick overlapping flat-top brows, tight frown
-            p.eyeW = 14;
-            p.eyeH = 10;
-            p.eyeLY = 28;
+            // Standard eyes with sharp angled brows, tight frown
+            p.eyeLY = 28;         // Bring eyeballs down
             p.eyeRY = 28;
-            p.pupilR = 3;
-            p.pupilOY = 0;
             p.browVisible = true;
             p.browLAngle = 8;     // Strong inward-down angle
             p.browRAngle = 8;
-            p.browLen = 18;
-            p.browOffY = 4;       // Closer to eyes — more menacing
+            p.browLen = 36;       // Wide enough to completely mask the top of the eye without leaving spikes
+            p.browOffY = -9;      // Pulls brows down even deeper for a heavier cut
             p.mouthCurve = -6;    // Tight frown
-            p.mouthW = 10;
+            p.mouthW = 8;
             p.mouthY = 49;
             break;
 
         case Emotion::SURPRISED:
-            // Wide round eyes, tiny pupils, open O mouth, jump up
-            p.eyeW = 16;
-            p.eyeH = 20;
-            p.eyeLY = 23;
-            p.eyeRY = 23;
+            // Standard eyes, no brows, tiny pupils, open O mouth
             p.pupilR = 2;         // Tiny startled pupils
             p.pupilOY = 0;
+            p.browVisible = false;
             p.mouthCurve = 0;
             p.mouthOpenH = 10;    // Open mouth (O shape)
             p.mouthW = 6;
@@ -108,12 +105,12 @@ FaceParams EmotionEngine::getEmotionParams(Emotion e) {
         case Emotion::LOVE:
             // Heart-shaped eyes, big smile, blush, floating hearts
             p.heartEyes = true;
-            p.eyeW = 14;
-            p.eyeH = 14;
+            p.eyeW = 11;
+            p.eyeH = 11;
             p.eyeLY = 25;
             p.eyeRY = 25;
-            p.mouthCurve = 8;
-            p.mouthW = 14;
+            p.mouthCurve = 6;
+            p.mouthW = 12;
             p.blushR = 5;
             p.bounce = -1;
             break;
@@ -123,9 +120,62 @@ FaceParams EmotionEngine::getEmotionParams(Emotion e) {
             p.winkLeft = true;
             p.eyeLY = 27;
             p.eyeRY = 25;
+            p.eyeH = 14;
+            // p.pupilR = 4;         // Smaller pupil
             p.mouthCurve = 6;     // Cheeky smile
             p.mouthW = 12;
             p.blushR = 3;         // Subtle blush
+            break;
+
+        case Emotion::JOYFUL:
+            // ^_^ eyes with D-shaped smile and blush
+            p.arcEyes = true;
+            p.eyeW = 10;          // Wider arcs
+            p.eyeLY = 27;
+            p.eyeRY = 27;
+            p.mouthCurve = 5;     // D-shape trigger
+            p.mouthOpenH = 10;
+            p.mouthW = 12;
+            p.blushR = 5;         // Use standard blush instead of custom marks
+            p.bounce = -2;
+            break;
+
+        case Emotion::EXCITED:
+            // > < tight closed eyes with D-shaped smile and blush
+            p.squeezeEyes = true;
+            p.eyeW = 8;           // Smaller size for the > <
+            p.eyeLY = 26;         // Shift up slightly
+            p.eyeRY = 26;
+            p.mouthCurve = 5;     // D-shape trigger
+            p.mouthOpenH = 10;
+            p.mouthW = 12;
+            p.blushR = 5;         // Use standard blush instead of custom marks
+            p.bounce = -3;        // Big bounce
+            break;
+
+        case Emotion::STARSTRUCK:
+            // Heart-shaped eyes with big open D-shaped smile and blush
+            p.heartEyes = true;
+            p.eyeW = 11;
+            p.eyeH = 11;
+            p.eyeLY = 25;
+            p.eyeRY = 25;
+            p.mouthCurve = 5;     // D-shape trigger
+            p.mouthOpenH = 10;
+            p.mouthW = 12;
+            p.blushR = 5;
+            p.bounce = -2;
+            break;
+
+        case Emotion::PLAYFUL_LOVE:
+            p.winkRightSqueeze = true;
+            p.happyMarks = true;      // horizontal pill marks under eyes
+            p.eyeW = 11;
+            p.eyeH = 12;
+            p.mouthCurve = 5;         // D-shape smile
+            p.mouthOpenH = 8;
+            p.mouthW = 10;
+            p.bounce = -2;
             break;
 
         default:

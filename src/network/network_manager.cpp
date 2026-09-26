@@ -26,13 +26,52 @@ void NetworkManager::begin(const String &ssid, const String &pass,
 void NetworkManager::update(uint32_t nowMs) {
   switch (_state) {
   case NetState::CONNECTING:
+    // Handle non-blocking PHY startup sequence
+    if (_asyncConnectStep == 1) {
+      if (nowMs - _asyncConnectTimer >= 1500) {
+        WiFi.mode(WIFI_STA);
+        _asyncConnectStep = 2;
+        _asyncConnectTimer = nowMs;
+      }
+      break;
+    } else if (_asyncConnectStep == 2) {
+      if (nowMs - _asyncConnectTimer >= 500) {
+        _asyncConnectStep = 0;
+        WiFi.setAutoReconnect(true);
+        WiFi.setSleep(WIFI_PS_MIN_MODEM);
+        WiFi.setTxPower(WIFI_POWER_8_5dBm);
+        WiFi.begin(_ssid.c_str(), _pass.c_str());
+      }
+      break;
+    }
+
     if (WiFi.status() == WL_CONNECTED) {
       _state = NetState::CONNECTED;
+      _connectionRetries = 0;
+      _connectedSinceMs = nowMs;
+      _lastActivityMs = nowMs;
       LOG_I("WIFI", "Connected: %s", WiFi.localIP().toString().c_str());
-      syncTime();
+      if (!_timeSynced) {
+          syncTime();
+      }
     } else if (nowMs - _connectStartMs >= WIFI_CONNECT_TIMEOUT_MS) {
-      LOG_E("WIFI", "Connection timeout, starting AP");
-      startAP();
+      if (_connectionRetries < 2) {
+        _connectionRetries++;
+        _connectStartMs = nowMs;
+        LOG_W("WIFI", "Connection timeout, retrying (%d/3)...",
+              _connectionRetries + 1);
+
+        // Hard reset PHY again on retry
+        WiFi.disconnect(true, true);
+        WiFi.mode(WIFI_OFF);
+        
+        // Hand off to async state machine
+        _asyncConnectStep = 1;
+        _asyncConnectTimer = nowMs;
+      } else {
+        LOG_E("WIFI", "Connection failed after 3 attempts. Starting AP...");
+        startAP();
+      }
     }
     break;
 
@@ -42,14 +81,63 @@ void NetworkManager::update(uint32_t nowMs) {
       _state = NetState::CONNECTING;
       _connectStartMs = nowMs;
       WiFi.reconnect();
+      break;
     }
     // Periodic NTP resync
     if (_timeSynced && (nowMs - _lastNtpSyncMs >= NTP_SYNC_INTERVAL_MS)) {
       syncTime();
     }
+
+    // Duty-cycle: check if we should power down the radio
+    if (_dutyCycleEnabled) {
+      // Use longer timeout if a web client has been active this wake cycle
+      uint32_t idleTimeout = _hasWebClient
+          ? WIFI_WEB_IDLE_TIMEOUT_MS    // 3 min after last web request
+          : WIFI_ACTIVE_WINDOW_MS;       // 30s for service-only wake
+
+      bool activityIdle = (nowMs - _lastActivityMs >= idleTimeout);
+      bool webIdle = !_hasWebClient ||
+                     (nowMs - _lastWebActivityMs >= idleTimeout);
+      // Ensure minimum uptime of WIFI_ACTIVE_WINDOW_MS before sleeping
+      bool minUptimeMet = (nowMs - _connectedSinceMs >= WIFI_ACTIVE_WINDOW_MS);
+
+      if (activityIdle && webIdle && minUptimeMet) {
+        sleepWiFi();
+      }
+    }
     break;
 
   case NetState::AP_MODE:
+    // Handle non-blocking AP startup sequence
+    if (_asyncConnectStep == 3) {
+      if (nowMs - _asyncConnectTimer >= 1000) {
+        _asyncConnectStep = 0;
+        if (_ssid.length() > 0) {
+          WiFi.mode(WIFI_AP_STA);
+        } else {
+          WiFi.mode(WIFI_AP);
+        }
+        WiFi.softAPdisconnect(true);
+        WiFi.disconnect(true);
+        _asyncConnectStep = 4;
+        _asyncConnectTimer = nowMs;
+      }
+      break;
+    } else if (_asyncConnectStep == 4) {
+      if (nowMs - _asyncConnectTimer >= 250) {
+        bool apStarted = WiFi.softAP(_apName.c_str(), WIFI_AP_PASSWORD, 6, 0, 4);
+        _asyncConnectStep = 5;
+        _asyncConnectTimer = nowMs;
+      }
+      break;
+    } else if (_asyncConnectStep == 5) {
+      if (nowMs - _asyncConnectTimer >= 500) {
+        _asyncConnectStep = 0;
+        LOG_I("WIFI", "AP started: %s on CH 6", _apName.c_str());
+      }
+      break;
+    }
+
     // AP mode is persistent until credentials are provided,
     // but if we have an SSID saved, let's continually retry in the background
     if (_ssid.length() > 0) {
@@ -58,7 +146,9 @@ void NetworkManager::update(uint32_t nowMs) {
         WiFi.softAPdisconnect(true);
         WiFi.mode(WIFI_STA);
         _state = NetState::CONNECTED;
-        syncTime();
+        if (!_timeSynced) {
+            syncTime();
+        }
       } else if (nowMs - _lastRetryMs >= 60000) {
         _lastRetryMs = nowMs;
         LOG_I("WIFI", "Retrying connection to %s in background...",
@@ -66,6 +156,15 @@ void NetworkManager::update(uint32_t nowMs) {
         WiFi.disconnect(false, true); // Wipe stale state but keep WiFi on
         WiFi.begin(_ssid.c_str(), _pass.c_str());
       }
+    }
+    break;
+
+  case NetState::WIFI_OFF:
+    if (_wakeRequested) {
+      _wakeRequested = false;
+      _hasWebClient = false;
+      LOG_I("WIFI", "Duty cycle: waking radio (requested)");
+      connectSTA(_ssid, _pass);
     }
     break;
 
@@ -79,44 +178,30 @@ void NetworkManager::connectSTA(const String &ssid, const String &pass) {
   _pass = pass;
   _state = NetState::CONNECTING;
   _connectStartMs = millis();
+  _connectionRetries = 0;
 
   LOG_I("WIFI", "Connecting to: %s", _ssid.c_str());
 
   // Hard reset WiFi PHY to wipe stale WPA3 SAE state on soft reboots
   WiFi.disconnect(true, true);
   WiFi.mode(WIFI_OFF);
-  delay(1000);
-  WiFi.mode(WIFI_STA);
-  WiFi.setAutoReconnect(true);
-  WiFi.setSleep(false);
-  WiFi.setTxPower(WIFI_POWER_19_5dBm);
-
-  WiFi.begin(_ssid.c_str(), _pass.c_str());
+  
+  // Hand off the 1500ms + 500ms delays to the async state machine in update()
+  _asyncConnectStep = 1;
+  _asyncConnectTimer = millis();
 }
 
 void NetworkManager::startAP() {
   _state = NetState::AP_MODE;
   _lastRetryMs = millis();
 
-  // Hard reset the radio to clear any stale PHY state from soft
-  // reboots/flashing
+  // Reset WiFi state cleanly
   WiFi.disconnect(true, true);
   WiFi.mode(WIFI_OFF);
-  delay(500);
-
-  if (_ssid.length() > 0) {
-    WiFi.mode(WIFI_AP_STA);
-  } else {
-    WiFi.mode(WIFI_AP);
-  }
-
-  // setTxPower only — do NOT call WiFi.setSleep in AP mode, it breaks DHCP
-  WiFi.setTxPower(WIFI_POWER_19_5dBm);
-  WiFi.softAP(_apName.c_str(), WIFI_AP_PASSWORD);
-  delay(100); // Give DHCP server time to initialize before clients connect
-
-  LOG_I("WIFI", "AP started: %s (IP: %s)", _apName.c_str(),
-        WiFi.softAPIP().toString().c_str());
+  
+  // Hand off the delays to the async state machine in update()
+  _asyncConnectStep = 3;
+  _asyncConnectTimer = millis();
 }
 
 void NetworkManager::disconnect() {
@@ -132,7 +217,11 @@ void NetworkManager::syncTime() {
 }
 
 bool NetworkManager::getLocalTime(struct tm &timeinfo) {
-  return ::getLocalTime(&timeinfo, 100); // 100ms timeout
+  bool valid = ::getLocalTime(&timeinfo, 100); // 100ms timeout
+  if (valid && timeinfo.tm_year > 120) { // Reject dates before 2020
+    return true;
+  }
+  return false;
 }
 
 NetState NetworkManager::getState() const { return _state; }
@@ -168,6 +257,51 @@ void NetworkManager::setTimezone(int32_t offsetSeconds) {
 }
 
 bool NetworkManager::isTimeSynced() const { return _timeSynced; }
+
+bool NetworkManager::needsTimeSync(uint32_t nowMs) const {
+  return _timeSynced && (nowMs - _lastNtpSyncMs >= NTP_SYNC_INTERVAL_MS);
+}
+
+// =============================================================
+// WiFi Power Management (Duty Cycling)
+// =============================================================
+
+void NetworkManager::requestWiFi() {
+  _lastActivityMs = millis();
+  if (_state == NetState::WIFI_OFF) {
+    _wakeRequested = true;
+  }
+}
+
+void NetworkManager::notifyWebActivity() {
+  uint32_t now = millis();
+  _lastWebActivityMs = now;
+  _lastActivityMs = now;
+  _hasWebClient = true;
+}
+
+void NetworkManager::enableDutyCycle(bool en) {
+  _dutyCycleEnabled = en;
+  if (en && _state == NetState::CONNECTED) {
+    // Start tracking from now so we don't immediately sleep
+    _connectedSinceMs = millis();
+    _lastActivityMs = millis();
+  }
+  LOG_I("WIFI", "Duty cycle %s", en ? "ENABLED" : "DISABLED");
+}
+
+bool NetworkManager::isDutyCycleActive() const {
+  return _dutyCycleEnabled;
+}
+
+void NetworkManager::sleepWiFi() {
+  LOG_I("WIFI", "Duty cycle: radio OFF (idle timeout)");
+  WiFi.disconnect(true, true);
+  WiFi.mode(WIFI_OFF);
+  _state = NetState::WIFI_OFF;
+  _hasWebClient = false;
+  _wakeRequested = false;
+}
 
 void NetworkManager::generateAPName() {
   uint8_t mac[6];

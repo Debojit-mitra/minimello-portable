@@ -23,6 +23,10 @@ enum class Emotion : uint8_t {
     SLEEPY,
     LOVE,
     WINK,
+    JOYFUL,
+    EXCITED,
+    STARSTRUCK,
+    PLAYFUL_LOVE,
     COUNT  // sentinel for iteration
 };
 
@@ -64,6 +68,9 @@ struct FaceParams {
     bool  heartEyes;        // Draw hearts instead of eyes
     bool  arcEyes;          // Draw ^_^ arc eyes (happy squint)
     bool  winkLeft;         // Left eye closed as arc (wink)
+    bool  squeezeEyes;      // Draw > < tight closed eyes
+    bool  winkRightSqueeze; // Right eye closed as < (playful wink)
+    bool  happyMarks;       // Draw stylistic sparkle/blush lines around eyes
 };
 
 // Floating particle (hearts, stars, Zzz)
@@ -172,10 +179,12 @@ private:
     // Rendering sub-functions
     void drawEye(DisplayType& d, bool isLeft, int16_t yOff);
     void drawArcEye(DisplayType& d, bool isLeft, int16_t yOff);
+    void drawSqueezeEye(DisplayType& d, bool isLeft, int16_t yOff);
     void drawHeart(DisplayType& d, int16_t cx, int16_t cy, int16_t size);
     void drawEyebrow(DisplayType& d, bool isLeft, int16_t yOff);
     void drawMouth(DisplayType& d, int16_t yOff);
     void drawBlush(DisplayType& d, int16_t yOff);
+    void drawHappyMarks(DisplayType& d, int16_t yOff);
     void drawParticles(DisplayType& d);
 
     // Particle spawning

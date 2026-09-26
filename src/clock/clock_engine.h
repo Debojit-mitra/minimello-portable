@@ -3,6 +3,10 @@
 #include <Arduino.h>
 #include "display_config.h"
 #include <U8g2_for_Adafruit_GFX.h>
+#include "network/network_manager.h"
+
+// Forward declaration (defined in power/power_manager.h)
+enum class PowerSource : uint8_t;
 
 extern U8G2_FOR_ADAFRUIT_GFX u8g2Fonts;
 
@@ -41,7 +45,8 @@ enum class ClockFace : uint8_t {
 
 enum class DashboardScreen : uint8_t {
     TIME = 0,
-    WEATHER = 1
+    WEATHER = 1,
+    CHARGING = 2
 };
 
 class ClockEngine {
@@ -58,12 +63,13 @@ public:
     // Sub-screen control (Time vs Weather)
     void toggleSubScreen();
     void resetView();
+    void showChargingScreen();
 
     // Data setters (called by main loop with fresh data)
     void setTime(uint8_t hour, uint8_t minute, uint8_t second);
     void setDate(uint8_t day, uint8_t month, uint16_t year, uint8_t dow);
-    void setBattery(uint8_t percent, bool charging);
-    void setWiFi(bool connected, int8_t rssi);
+    bool setBattery(uint8_t percent, PowerSource source);
+    void setWiFi(NetState state, int8_t rssi);
     void setWeather(const WeatherData& data);
     void setIP(const String& ip);
 
@@ -79,8 +85,9 @@ private:
     uint8_t  _day = 1, _month = 1, _dow = 0;
     uint16_t _year = 2025;
     uint8_t  _battPercent = 0;
-    bool     _battCharging = false;
+    PowerSource _powerSource = PowerSource(0); // BATTERY = 0
     bool     _wifiConnected = false;
+    NetState _wifiState = NetState::WIFI_OFF;
     int8_t   _wifiRSSI = -100;
     WeatherData _weather;
 
@@ -106,6 +113,7 @@ private:
 
     // Render weather dashboard
     void renderWeatherDashboard(DisplayType& d);
+    void renderChargingDashboard(DisplayType& d);
 
     // Shared UI elements
     void drawStatusBar(DisplayType& d);

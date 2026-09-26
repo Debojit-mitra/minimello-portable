@@ -8,7 +8,8 @@
 #define PIN_SDA 8         // I2C SDA → OLED
 #define PIN_SCL 10        // I2C SCL → OLED
 #define PIN_TOUCH 2       // TTP223 output (active HIGH)
-#define PIN_BATTERY_ADC 0 // Battery voltage divider midpoint
+#define PIN_BATTERY_ADC 4 // Battery voltage divider midpoint
+#define PIN_CHRG 5        // TP4056 CHRG pin (LOW = charging)
 
 // --- OLED Display ---
 #define USE_1_3_INCH_OLED                                                      \
@@ -21,16 +22,24 @@
 
 // --- Battery ---
 #define ENABLE_BATTERY_MODULE                                                  \
-  false // Set to true if battery & voltage divider are present
-#define BATTERY_DIVIDER_RATIO 2.0f  // 100kΩ / 100kΩ voltage divider
+  true // Set to true if battery & voltage divider are present
+#define BATTERY_DIVIDER_RATIO 2.018f  // Calibrated: increased from 2.018 to compensate for 3.60V false-triggers
 #define BATTERY_FULL_MV 4200        // 4.20V = 100%
-#define BATTERY_EMPTY_MV 3300       // 3.30V = 0%
+#define BATTERY_EMPTY_MV 3350       // 3.35V = 0% (headroom above ESP32-C3 brownout)
 #define BATTERY_LOW_PERCENT 10      // Low battery warning threshold
 #define BATTERY_CRITICAL_PERCENT 5  // Critical battery threshold
 #define BATTERY_READ_INTERVAL 30000 // Read every 30 seconds (ms)
 #define BATTERY_SAMPLE_COUNT 8      // ADC samples to average
 
+// --- Battery Power Optimizations ---
+// These only take effect when ENABLE_BATTERY_MODULE is true.
+#define ENABLE_CPU_SCALING true      // Drop to 80MHz when WiFi radio is off
+#define CPU_FREQ_HIGH 160            // MHz — when WiFi is active
+#define CPU_FREQ_LOW 80              // MHz — when WiFi is off (saves ~20mA)
+#define ENABLE_LIGHT_SLEEP true      // Use esp_light_sleep between frames
+
 // --- Touch Input ---
+#define ENABLE_TOUCH_SENSOR true // Set to true when TTP223 is connected
 #define TOUCH_DEBOUNCE_MS 50     // Standard debounce
 #define TOUCH_LONG_PRESS_MS 1500 // Long press threshold
 #define TOUCH_VERY_LONG_PRESS_MS                                               \
@@ -62,11 +71,18 @@
 
 // --- Network ---
 #define WIFI_AP_PREFIX "Minimello-"
-#define WIFI_AP_PASSWORD "minimello" // Setup AP password (shown on screen)
-#define WIFI_CONNECT_TIMEOUT_MS 15000 // WiFi connection timeout
+#define WIFI_AP_PASSWORD "minimello"  // Setup AP password (shown on screen)
+#define WIFI_CONNECT_TIMEOUT_MS 10000 // WiFi connection timeout (fail fast to trigger retry)
 #define NTP_SERVER "pool.ntp.org"
 #define NTP_SYNC_INTERVAL_MS (6ULL * 3600 * 1000) // Resync every 6 hours
 #define DEFAULT_TZ_OFFSET 19800                   // IST (+5:30) in seconds
+
+// --- WiFi Power Management (Duty Cycling) ---
+// When enabled, WiFi radio is powered OFF when idle and woken on-demand
+// by services (weather, NTP, OTA) or user interaction (touch).
+#define WIFI_DUTY_CYCLE true            // Enable demand-driven WiFi sleep
+#define WIFI_ACTIVE_WINDOW_MS  30000    // 30s: min time to stay on after wake
+#define WIFI_WEB_IDLE_TIMEOUT_MS 180000 // 3 min: stay on while web UI is active
 
 // --- Weather ---
 #define WEATHER_REFRESH_MS 1800000 // 30 minutes

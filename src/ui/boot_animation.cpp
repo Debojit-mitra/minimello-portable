@@ -188,7 +188,6 @@ void playBootAnimation() {
 
 void drawBootProgress(uint8_t step, uint8_t totalSteps, const char *label) {
 
-
   // Progress bar area
   int16_t barX = 14;
   int16_t barY = 42;

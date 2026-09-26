@@ -17,6 +17,9 @@ public:
     void forceCheck();          // Reset timer and check now
     void requestUpdate();       // Request main loop to perform update
 
+    // WiFi duty cycle: check if an OTA check is due
+    bool needsWiFi(uint32_t nowMs) const;
+
     // Status
     String getLatestVersion() const;
     bool isUpdateAvailable() const;

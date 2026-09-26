@@ -99,6 +99,10 @@ void OTAManager::forceCheck() {
   _lastCheckMs = 0; // Will trigger on next update() call
 }
 
+bool OTAManager::needsWiFi(uint32_t nowMs) const {
+  return (nowMs - _lastCheckMs >= OTA_CHECK_INTERVAL_MS) || _updateRequested;
+}
+
 String OTAManager::getLatestVersion() const { return _latestVersion; }
 
 bool OTAManager::isUpdateAvailable() const { return _updateAvailable; }

@@ -41,7 +41,9 @@ void MiniWebServer::begin(ConfigManager *config, ScreenManager *screen,
 }
 
 void MiniWebServer::enableCaptivePortal() {
+  if (_dns) return;
   _dns = new DNSServer();
+  _dns->setErrorReplyCode(DNSReplyCode::NoError);
   _dns->start(53, "*", WiFi.softAPIP());
   LOG_I("WEB", "Captive portal DNS started");
 
@@ -86,71 +88,108 @@ void MiniWebServer::setupStaticRoutes() {
 }
 
 void MiniWebServer::setupAPIRoutes() {
+  // Helper: notify WiFi duty cycle that a web client is active.
+  // This extends the WiFi active window so the radio stays on while
+  // the user is interacting with the Web UI.
+  auto notifyActivity = [this]() { _network->notifyWebActivity(); };
+
   // --- GET routes ---
   _server.on("/api/status", HTTP_GET,
-             [this](AsyncWebServerRequest *req) { handleGetStatus(req); });
+             [this, notifyActivity](AsyncWebServerRequest *req) {
+               notifyActivity();
+               handleGetStatus(req);
+             });
 
   _server.on("/api/config", HTTP_GET,
-             [this](AsyncWebServerRequest *req) { handleGetConfig(req); });
+             [this, notifyActivity](AsyncWebServerRequest *req) {
+               notifyActivity();
+               handleGetConfig(req);
+             });
 
   _server.on("/api/wifi/scan", HTTP_GET,
-             [this](AsyncWebServerRequest *req) { handleGetWifiScan(req); });
+             [this, notifyActivity](AsyncWebServerRequest *req) {
+               notifyActivity();
+               handleGetWifiScan(req);
+             });
 
   // --- POST routes (with body) ---
   // Config update
   _server.on(
       "/api/config", HTTP_POST,
       [](AsyncWebServerRequest *req) { /* handled in body cb */ }, nullptr,
-      [this](AsyncWebServerRequest *req, uint8_t *data, size_t len,
+      [this, notifyActivity](AsyncWebServerRequest *req, uint8_t *data, size_t len,
              size_t index, size_t total) {
-        if (index == 0)
+        if (index == 0) {
+          notifyActivity();
           handlePostConfig(req, data, len);
+        }
       });
 
   // WiFi credentials
   _server.on(
       "/api/wifi", HTTP_POST, [](AsyncWebServerRequest *req) {}, nullptr,
-      [this](AsyncWebServerRequest *req, uint8_t *data, size_t len,
+      [this, notifyActivity](AsyncWebServerRequest *req, uint8_t *data, size_t len,
              size_t index, size_t total) {
-        if (index == 0)
+        if (index == 0) {
+          notifyActivity();
           handlePostWifi(req, data, len);
+        }
       });
 
   // Set emotion
   _server.on(
       "/api/emotion", HTTP_POST, [](AsyncWebServerRequest *req) {}, nullptr,
-      [this](AsyncWebServerRequest *req, uint8_t *data, size_t len,
+      [this, notifyActivity](AsyncWebServerRequest *req, uint8_t *data, size_t len,
              size_t index, size_t total) {
-        if (index == 0)
+        if (index == 0) {
+          notifyActivity();
           handlePostEmotion(req, data, len);
+        }
       });
 
   // Set clock face
   _server.on(
       "/api/clock/face", HTTP_POST, [](AsyncWebServerRequest *req) {}, nullptr,
-      [this](AsyncWebServerRequest *req, uint8_t *data, size_t len,
+      [this, notifyActivity](AsyncWebServerRequest *req, uint8_t *data, size_t len,
              size_t index, size_t total) {
-        if (index == 0)
+        if (index == 0) {
+          notifyActivity();
           handlePostClockFace(req, data, len);
+        }
       });
 
   // Toggle engine
   _server.on("/api/switch", HTTP_POST,
-             [this](AsyncWebServerRequest *req) { handlePostSwitch(req); });
+             [this, notifyActivity](AsyncWebServerRequest *req) {
+               notifyActivity();
+               handlePostSwitch(req);
+             });
 
   // OTA
   _server.on("/api/ota/check", HTTP_POST,
-             [this](AsyncWebServerRequest *req) { handlePostOtaCheck(req); });
+             [this, notifyActivity](AsyncWebServerRequest *req) {
+               notifyActivity();
+               handlePostOtaCheck(req);
+             });
 
   _server.on("/api/ota/update", HTTP_POST,
-             [this](AsyncWebServerRequest *req) { handlePostOtaUpdate(req); });
+             [this, notifyActivity](AsyncWebServerRequest *req) {
+               notifyActivity();
+               handlePostOtaUpdate(req);
+             });
 
   _server.on("/api/ota/progress", HTTP_GET,
-             [this](AsyncWebServerRequest *req) { handleGetOtaProgress(req); });
+             [this, notifyActivity](AsyncWebServerRequest *req) {
+               notifyActivity();
+               handleGetOtaProgress(req);
+             });
 
   // Restart device
   _server.on("/api/restart", HTTP_POST,
-             [this](AsyncWebServerRequest *req) { handlePostRestart(req); });
+             [this, notifyActivity](AsyncWebServerRequest *req) {
+               notifyActivity();
+               handlePostRestart(req);
+             });
 
   // CORS preflight
   _server.on("/api/*", HTTP_OPTIONS, [this](AsyncWebServerRequest *req) {

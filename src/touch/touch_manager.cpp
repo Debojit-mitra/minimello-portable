@@ -7,112 +7,110 @@
 
 volatile bool TouchManager::_isrFlag = false;
 
-void IRAM_ATTR TouchManager::_isrHandler() {
-    _isrFlag = true;
-}
+void IRAM_ATTR TouchManager::_isrHandler() { _isrFlag = true; }
 
 void TouchManager::begin(uint8_t pin) {
-    _pin = pin;
-    pinMode(_pin, INPUT);
-    attachInterrupt(digitalPinToInterrupt(_pin), _isrHandler, CHANGE);
+#if ENABLE_TOUCH_SENSOR
+  _pin = pin;
+  pinMode(_pin, INPUT_PULLDOWN); // Use internal pulldown to prevent floating
+  attachInterrupt(digitalPinToInterrupt(_pin), _isrHandler, CHANGE);
+#endif
 }
 
 void TouchManager::update() {
-    uint32_t now = millis();
+#if ENABLE_TOUCH_SENSOR
+  uint32_t now = millis();
 
-    // Read current pin state (with ISR flag for responsiveness)
-    bool rawState = digitalRead(_pin);
+  // Read current pin state (with ISR flag for responsiveness)
+  bool rawState = digitalRead(_pin);
 
-    // Debounce
-    if (rawState != _currentState) {
-        if (now - _debounceMs < TOUCH_DEBOUNCE_MS) {
-            return;  // Still bouncing
-        }
-        _debounceMs = now;
-        _currentState = rawState;
+  // Debounce
+  if (rawState != _currentState) {
+    if (now - _debounceMs < TOUCH_DEBOUNCE_MS) {
+      return; // Still bouncing
+    }
+    _debounceMs = now;
+    _currentState = rawState;
+  }
+
+  // Clear ISR flag
+  _isrFlag = false;
+
+  // --- State transitions ---
+
+  // PRESS detected (rising edge)
+  if (_currentState && !_lastState) {
+    _pressStartMs = now;
+    _longPressTriggered = false;
+    _veryLongPressTriggered = false;
+  }
+
+  // HELD — check for long press
+  if (_currentState && _lastState) {
+    uint32_t holdTime = now - _pressStartMs;
+
+    if (!_longPressTriggered && holdTime >= TOUCH_LONG_PRESS_MS) {
+      _longPressTriggered = true;
+      emit(TouchEvent::LONG_PRESS);
     }
 
-    // Clear ISR flag
-    _isrFlag = false;
-
-    // --- State transitions ---
-
-    // PRESS detected (rising edge)
-    if (_currentState && !_lastState) {
-        _pressStartMs = now;
-        _longPressTriggered = false;
-        _veryLongPressTriggered = false;
+    if (!_veryLongPressTriggered && holdTime >= TOUCH_VERY_LONG_PRESS_MS) {
+      _veryLongPressTriggered = true;
+      emit(TouchEvent::VERY_LONG_PRESS);
     }
+  }
 
-    // HELD — check for long press
-    if (_currentState && _lastState) {
-        uint32_t holdTime = now - _pressStartMs;
-        
-        if (!_longPressTriggered && holdTime >= TOUCH_LONG_PRESS_MS) {
-            _longPressTriggered = true;
-            emit(TouchEvent::LONG_PRESS);
-        }
-        
-        if (!_veryLongPressTriggered && holdTime >= TOUCH_VERY_LONG_PRESS_MS) {
-            _veryLongPressTriggered = true;
-            emit(TouchEvent::VERY_LONG_PRESS);
-        }
+  // RELEASE detected (falling edge)
+  if (!_currentState && _lastState) {
+    uint32_t pressDuration = now - _pressStartMs;
+
+    // Only count as tap if it wasn't a long press
+    if (!_longPressTriggered && pressDuration < TOUCH_LONG_PRESS_MS) {
+      _tapCount++;
+
+      if (_tapCount == 1) {
+        _waitingForDoubleTap = true;
+        _lastReleaseMs = now;
+      }
     }
+  }
 
-    // RELEASE detected (falling edge)
-    if (!_currentState && _lastState) {
-        uint32_t pressDuration = now - _pressStartMs;
-
-        // Only count as tap if it wasn't a long press
-        if (!_longPressTriggered && pressDuration < TOUCH_LONG_PRESS_MS) {
-            _tapCount++;
-
-            if (_tapCount == 1) {
-                _waitingForDoubleTap = true;
-                _lastReleaseMs = now;
-            }
-        }
+  // Check for double-tap timeout
+  if (_waitingForDoubleTap && !_currentState) {
+    if (_tapCount >= 2) {
+      // Double tap detected
+      emit(TouchEvent::DOUBLE_TAP);
+      _tapCount = 0;
+      _waitingForDoubleTap = false;
+    } else if (now - _lastReleaseMs >= TOUCH_DOUBLE_TAP_MS) {
+      // Timeout — single tap
+      emit(TouchEvent::TAP);
+      _tapCount = 0;
+      _waitingForDoubleTap = false;
     }
+  }
 
-    // Check for double-tap timeout
-    if (_waitingForDoubleTap && !_currentState) {
-        if (_tapCount >= 2) {
-            // Double tap detected
-            emit(TouchEvent::DOUBLE_TAP);
-            _tapCount = 0;
-            _waitingForDoubleTap = false;
-        } else if (now - _lastReleaseMs >= TOUCH_DOUBLE_TAP_MS) {
-            // Timeout — single tap
-            emit(TouchEvent::TAP);
-            _tapCount = 0;
-            _waitingForDoubleTap = false;
-        }
-    }
-
-    _lastState = _currentState;
+  _lastState = _currentState;
+#endif
 }
 
-void TouchManager::onEvent(TouchCallback cb) {
-    _callback = cb;
-}
+void TouchManager::onEvent(TouchCallback cb) { _callback = cb; }
 
-bool TouchManager::isTouched() const {
-    return _currentState;
-}
+bool TouchManager::isTouched() const { return _currentState; }
 
 bool TouchManager::isLongPressing() const {
-    return _currentState && _longPressTriggered;
+  return _currentState && _longPressTriggered;
 }
 
 uint32_t TouchManager::getHoldTimeMs() const {
-    if (_currentState) {
-        return millis() - _pressStartMs;
-    }
-    return 0;
+  if (_currentState) {
+    return millis() - _pressStartMs;
+  }
+  return 0;
 }
 
 void TouchManager::emit(TouchEvent event) {
-    if (_callback) {
-        _callback(event);
-    }
+  if (_callback) {
+    _callback(event);
+  }
 }

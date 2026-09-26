@@ -14,6 +14,9 @@ void MiniWebServer::handleGetStatus(AsyncWebServerRequest *req) {
   doc["name"] = FIRMWARE_NAME;
   doc["battery_percent"] = _power->getBatteryPercent();
   doc["battery_voltage"] = _power->getBatteryVoltage();
+  doc["is_charging"] = _power->isCharging();
+  doc["power_source"] = _power->isOnUSBPower() ? "usb" :
+                        _power->isCharging() ? "charging" : "battery";
   doc["wifi_connected"] = _network->isConnected();
   doc["wifi_rssi"] = _network->getRSSI();
   doc["ip"] = _network->getIP();

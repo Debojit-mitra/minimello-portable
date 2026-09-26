@@ -130,18 +130,24 @@ void EmotionEngine::lerpParams(float dt) {
     _current.blushR   = lerpf(_current.blushR,   _target.blushR,   t);
     _current.bounce   = lerpf(_current.bounce,   _target.bounce,   t);
 
-    // Snap booleans when close enough
-    _current.browVisible = _target.browVisible;
-    _current.heartEyes = _target.heartEyes;
-    _current.arcEyes = _target.arcEyes;
-    _current.winkLeft = _target.winkLeft;
-
     // Check if transition is complete (all values close to target)
     float maxDiff = fabsf(_current.eyeH - _target.eyeH) +
                     fabsf(_current.mouthCurve - _target.mouthCurve) +
                     fabsf(_current.bounce - _target.bounce);
     if (maxDiff < 0.5f) {
         _transitioning = false;
+    }
+
+    // Snap booleans only when the eyes are closed (during a blink) 
+    // or when the transition is fully complete, to prevent jarring sudden changes.
+    if (_blinkAmount > 0.8f || !_transitioning) {
+        _current.browVisible = _target.browVisible;
+        _current.heartEyes = _target.heartEyes;
+        _current.arcEyes = _target.arcEyes;
+        _current.winkLeft = _target.winkLeft;
+        _current.squeezeEyes = _target.squeezeEyes;
+        _current.winkRightSqueeze = _target.winkRightSqueeze;
+        _current.happyMarks = _target.happyMarks;
     }
 }
 

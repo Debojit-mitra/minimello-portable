@@ -9,66 +9,19 @@
 // These are the only bitmaps in the firmware — all face
 // rendering is procedural.
 
-// --- Battery Icons (16x8) ---
+// Battery icons are now drawn programmatically in clock_engine.cpp
+// (4-bar fill + charging blink animation). Only USB plug icon remains as bitmap.
 
-// Battery full
-static const uint8_t PROGMEM icon_battery_full[] = {
-    0x7F, 0xFC,  // .XXXXXXXXXX.....
-    0x40, 0x04,  // .X..........X...
-    0x5F, 0x75,  // .X.XXXXX.XXX.X.X
-    0x5F, 0x77,  // .X.XXXXX.XXX.XXX
-    0x5F, 0x77,  // .X.XXXXX.XXX.XXX
-    0x5F, 0x75,  // .X.XXXXX.XXX.X.X
-    0x40, 0x04,  // .X..........X...
-    0x7F, 0xFC,  // .XXXXXXXXXX.....
-};
-
-// Battery high (75%)
-static const uint8_t PROGMEM icon_battery_high[] = {
-    0x7F, 0xFC,
-    0x40, 0x04,
-    0x5E, 0x75,
-    0x5E, 0x77,
-    0x5E, 0x77,
-    0x5E, 0x75,
-    0x40, 0x04,
-    0x7F, 0xFC,
-};
-
-// Battery medium (50%)
-static const uint8_t PROGMEM icon_battery_mid[] = {
-    0x7F, 0xFC,
-    0x40, 0x04,
-    0x58, 0x75,
-    0x58, 0x77,
-    0x58, 0x77,
-    0x58, 0x75,
-    0x40, 0x04,
-    0x7F, 0xFC,
-};
-
-// Battery low (25%)
-static const uint8_t PROGMEM icon_battery_low[] = {
-    0x7F, 0xFC,
-    0x40, 0x04,
-    0x40, 0x75,
-    0x40, 0x77,
-    0x40, 0x77,
-    0x40, 0x75,
-    0x40, 0x04,
-    0x7F, 0xFC,
-};
-
-// Battery critical / empty
-static const uint8_t PROGMEM icon_battery_empty[] = {
-    0x7F, 0xFC,
-    0x40, 0x04,
-    0x40, 0x05,
-    0x40, 0x07,
-    0x40, 0x07,
-    0x40, 0x05,
-    0x40, 0x04,
-    0x7F, 0xFC,
+// USB plug icon (16x8) — shown when USB powered, no battery
+static const uint8_t PROGMEM icon_usb_power[] = {
+    0x0C, 0x00,  // ....XX..........
+    0x1E, 0x00,  // ...XXXX.........
+    0x1E, 0x00,  // ...XXXX.........
+    0x3F, 0x00,  // ..XXXXXX........
+    0x3F, 0x00,  // ..XXXXXX........
+    0x1E, 0x00,  // ...XXXX.........
+    0x0C, 0x00,  // ....XX..........
+    0x0C, 0x00,  // ....XX..........
 };
 
 // --- WiFi Icons (12x12) ---
@@ -275,13 +228,4 @@ static const uint8_t PROGMEM sprite_zzz[] = {
     0x7C,  // .XXXXX..
     0x00,  // ........
     0x00,  // ........
-};
-
-// Array of battery icon pointers for easy indexing
-static const uint8_t* const battery_icons[] PROGMEM = {
-    icon_battery_full,
-    icon_battery_high,
-    icon_battery_mid,
-    icon_battery_low,
-    icon_battery_empty
 };

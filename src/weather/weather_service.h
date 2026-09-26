@@ -23,6 +23,9 @@ public:
 
     bool isConfigured() const;
 
+    // WiFi duty cycle: check if a refresh is due
+    bool needsWiFi(uint32_t nowMs) const;
+
 private:
     float       _lat = 0.0;
     float       _lon = 0.0;

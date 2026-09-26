@@ -53,7 +53,7 @@ void EmotionEngine::update(uint32_t deltaMs) {
     updateParticles(deltaMs);
 
     // Spawn particles for certain emotions
-    if (_emotion == Emotion::LOVE && random(100) < 3) {
+    if ((_emotion == Emotion::LOVE || _emotion == Emotion::PLAYFUL_LOVE) && random(100) < 3) {
         spawnParticle(0);  // hearts
     }
     if (_emotion == Emotion::SLEEPY && random(100) < 2) {
@@ -70,6 +70,18 @@ void EmotionEngine::setEmotion(Emotion e) {
     _emotion = e;
     _target = getEmotionParams(e);
     _transitioning = true;
+
+    // If eye styles are changing, force a blink so we can smoothly swap the boolean states while the eyes are closed
+    bool needsBlink = (_current.arcEyes != _target.arcEyes) ||
+                      (_current.heartEyes != _target.heartEyes) ||
+                      (_current.squeezeEyes != _target.squeezeEyes) ||
+                      (_current.winkLeft != _target.winkLeft) ||
+                      (_current.winkRightSqueeze != _target.winkRightSqueeze);
+    
+    if (needsBlink && !_isBlinking) {
+        _isBlinking = true;
+        _blinkPhase = 0;
+    }
 }
 
 Emotion EmotionEngine::getEmotion() const {
@@ -79,7 +91,8 @@ Emotion EmotionEngine::getEmotion() const {
 const char* EmotionEngine::getEmotionName() const {
     static const char* names[] = {
         "Neutral", "Happy", "Sad", "Angry",
-        "Surprised", "Sleepy", "Love", "Wink"
+        "Surprised", "Sleepy", "Love", "Wink",
+        "Joyful", "Excited", "Starstruck", "Playful Love"
     };
     return names[(uint8_t)_emotion];
 }

@@ -80,6 +80,11 @@ bool WeatherService::isConfigured() const {
     return (_lat != 0.0f || _lon != 0.0f);
 }
 
+bool WeatherService::needsWiFi(uint32_t nowMs) const {
+    if (!isConfigured()) return false;
+    return (_lastFetchMs == 0 || nowMs - _lastFetchMs >= WEATHER_REFRESH_MS);
+}
+
 void WeatherService::parseResponse(const String& json) {
     JsonDocument doc;
     DeserializationError err = deserializeJson(doc, json);
