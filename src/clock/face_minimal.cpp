@@ -111,11 +111,13 @@ void ClockEngine::renderMinimal(DisplayType& d) {
     int16_t startX = (128 - totalW) / 2 + _pixelShiftX;
     
     // Vertically center based on whether battery bar is present
-#if ENABLE_BATTERY_MODULE
-    int16_t y = (54 - H) / 2 + _pixelShiftY;
-#else
-    int16_t y = (SCREEN_HEIGHT - H) / 2 + _pixelShiftY;
-#endif
+    extern PowerManager powerMgr;
+    int16_t y;
+    if (powerMgr.hasBattery()) {
+        y = (54 - H) / 2 + _pixelShiftY;
+    } else {
+        y = (SCREEN_HEIGHT - H) / 2 + _pixelShiftY;
+    }
 
     int16_t currX = startX;
 
@@ -146,50 +148,50 @@ void ClockEngine::renderMinimal(DisplayType& d) {
     u8g2Fonts.print(ampmStr);
 
     // --- Battery icon at bottom (centered) ---
-#if ENABLE_BATTERY_MODULE
-    if (_powerSource != PowerSource::USB_POWERED) {
-        bool blinkOn = (millis() / 500) % 2 == 0;
+    if (powerMgr.hasBattery()) {
+        if (_powerSource != PowerSource::USB_POWERED) {
+            bool blinkOn = (millis() / 500) % 2 == 0;
 
-        // Low battery warning blink (flash the whole icon)
-        if (_powerSource == PowerSource::BATTERY && _battPercent <= 10 && !blinkOn) {
-            // Skip drawing the battery icon to create a blinking effect
-        } else {
-            // Larger battery icon (26px body + 2px nub = 28px total, 10px tall)
-            int16_t bx = (SCREEN_WIDTH - 28) / 2 + _pixelShiftX;
-            int16_t by = 53 + _pixelShiftY;
+            // Low battery warning blink (flash the whole icon)
+            if (_powerSource == PowerSource::BATTERY && _battPercent <= 10 && !blinkOn) {
+                // Skip drawing the battery icon to create a blinking effect
+            } else {
+                // Larger battery icon (26px body + 2px nub = 28px total, 10px tall)
+                int16_t bx = (SCREEN_WIDTH - 28) / 2 + _pixelShiftX;
+                int16_t by = 53 + _pixelShiftY;
 
-        d.drawRect(bx, by, 26, 10, DISPLAY_WHITE);         // Body outline
-        d.fillRect(bx + 26, by + 3, 2, 4, DISPLAY_WHITE);  // Positive terminal nub
+            d.drawRect(bx, by, 26, 10, DISPLAY_WHITE);         // Body outline
+            d.fillRect(bx + 26, by + 3, 2, 4, DISPLAY_WHITE);  // Positive terminal nub
 
-        // Number of solid (fully charged) bars
-        int solidBars = 0;
-        if (_powerSource == PowerSource::CHARGING) {
-            if      (_battPercent >= 80) solidBars = 3;
-            else if (_battPercent >= 55) solidBars = 2;
-            else if (_battPercent >= 30) solidBars = 1;
-            else                         solidBars = 0;
-        } else {
-            if      (_battPercent >= 75) solidBars = 4;
-            else if (_battPercent >= 50) solidBars = 3;
-            else if (_battPercent >= 25) solidBars = 2;
-            else if (_battPercent >  5)  solidBars = 1;
-        }
+            // Number of solid (fully charged) bars
+            int solidBars = 0;
+            if (_powerSource == PowerSource::CHARGING && _battPercent < 100) {
+                if      (_battPercent >= 80) solidBars = 3;
+                else if (_battPercent >= 55) solidBars = 2;
+                else if (_battPercent >= 30) solidBars = 1;
+                else                         solidBars = 0;
+            } else {
+                if      (_battPercent >= 75) solidBars = 4;
+                else if (_battPercent >= 50) solidBars = 3;
+                else if (_battPercent >= 25) solidBars = 2;
+                else if (_battPercent >  5)  solidBars = 1;
+            }
 
-        // 4 bars: each 4px wide, 2px gaps, 2px padding each side
-        // Offsets: 2, 8, 14, 20 (each 4w with 2px gap between)
-        const int16_t offsets[] = {2, 8, 14, 20};
-        bool blinkOn = (millis() / 500) % 2 == 0;
+            // 4 bars: each 4px wide, 2px gaps, 2px padding each side
+            // Offsets: 2, 8, 14, 20 (each 4w with 2px gap between)
+            const int16_t offsets[] = {2, 8, 14, 20};
+            bool blinkOn = (millis() / 500) % 2 == 0;
 
-        for (int i = 0; i < 4; i++) {
-            if (i < solidBars) {
-                d.fillRect(bx + offsets[i], by + 2, 4, 6, DISPLAY_WHITE); // Solid
-            } else if (i == solidBars && _powerSource == PowerSource::CHARGING) {
-                if (blinkOn) d.fillRect(bx + offsets[i], by + 2, 4, 6, DISPLAY_WHITE); // Blink
+            for (int i = 0; i < 4; i++) {
+                if (i < solidBars) {
+                    d.fillRect(bx + offsets[i], by + 2, 4, 6, DISPLAY_WHITE); // Solid
+                } else if (i == solidBars && _powerSource == PowerSource::CHARGING && _battPercent < 100) {
+                    if (blinkOn) d.fillRect(bx + offsets[i], by + 2, 4, 6, DISPLAY_WHITE); // Blink
+                }
+            }
             }
         }
-        }
     }
-#endif
 }
 
 // --- Shared UI ---

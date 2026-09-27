@@ -10,6 +10,8 @@ extern OTAManager otaMgr;
 
 void MiniWebServer::handleGetStatus(AsyncWebServerRequest *req) {
   JsonDocument doc;
+  doc["device_id"] = _config->getDeviceId();
+  doc["mac_address"] = _config->macId;
   doc["version"] = FIRMWARE_VERSION;
   doc["name"] = FIRMWARE_NAME;
   doc["battery_percent"] = _power->getBatteryPercent();
@@ -27,7 +29,8 @@ void MiniWebServer::handleGetStatus(AsyncWebServerRequest *req) {
   doc["emotion"] = _screen->emotionEngine()->getEmotionName();
   doc["clock_face"] = _screen->clockEngine()->getFaceName();
   doc["free_heap"] = ESP.getFreeHeap();
-  doc["battery_enabled"] = (bool)ENABLE_BATTERY_MODULE;
+  extern PowerManager powerMgr;
+  doc["battery_enabled"] = powerMgr.hasBattery();
   doc["has_update"] = otaMgr.isUpdateAvailable();
   doc["latest_version"] = otaMgr.getLatestVersion();
 
@@ -42,6 +45,8 @@ void MiniWebServer::handleGetStatus(AsyncWebServerRequest *req) {
 
 void MiniWebServer::handleGetConfig(AsyncWebServerRequest *req) {
   JsonDocument doc;
+  doc["device_id"] = _config->getDeviceId();
+  doc["mac_address"] = _config->macId;
   doc["wifi_ssid"] = _config->wifiSSID;
   doc["tz_offset"] = _config->tzOffset;
   doc["clock_face"] = _config->clockFace;

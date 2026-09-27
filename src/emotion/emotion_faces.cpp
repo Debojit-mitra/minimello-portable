@@ -167,16 +167,6 @@ FaceParams EmotionEngine::getEmotionParams(Emotion e) {
             p.bounce = -2;
             break;
 
-        case Emotion::PLAYFUL_LOVE:
-            p.winkRightSqueeze = true;
-            p.happyMarks = true;      // horizontal pill marks under eyes
-            p.eyeW = 11;
-            p.eyeH = 12;
-            p.mouthCurve = 5;         // D-shape smile
-            p.mouthOpenH = 8;
-            p.mouthW = 10;
-            p.bounce = -2;
-            break;
 
         default:
             break;

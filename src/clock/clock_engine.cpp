@@ -30,13 +30,9 @@ void ClockEngine::update(uint32_t deltaMs) {
         _colonVisible = !_colonVisible;
     }
 
-    // Auto toggle between sub-screens
-    // Normal: 2 screens (Time, Weather) in 10s = 5s each
-    // Charging: 3 screens (Time, Weather, Charging) in 10s = 3.3s each
-    uint32_t switchInterval = (_powerSource == PowerSource::CHARGING || _powerSource == PowerSource::USB_POWERED) ? 3300 : 5000;
-
+    // Auto toggle between sub-screens (Time ↔ Weather, 5s each)
     _screenSwitchTimer += deltaMs;
-    if (_screenSwitchTimer >= switchInterval) {
+    if (_screenSwitchTimer >= 5000) {
         _screenSwitchTimer = 0;
         // Prevent glitch where screen flashes for a fraction of a second 
         // right before global ScreenManager auto-switches to Emotion
@@ -78,8 +74,6 @@ void ClockEngine::update(uint32_t deltaMs) {
 void ClockEngine::render(DisplayType& display) {
     if (_currentScreen == DashboardScreen::WEATHER) {
         renderWeatherDashboard(display);
-    } else if (_currentScreen == DashboardScreen::CHARGING) {
-        renderChargingDashboard(display);
     } else {
         switch (_face) {
             case ClockFace::DIGITAL:  renderDigital(display);  break;
@@ -100,13 +94,6 @@ void ClockEngine::toggleSubScreen() {
     _screenSwitchTimer = 0; // Reset auto-switch timer on manual toggle
     if (_currentScreen == DashboardScreen::TIME) {
         _currentScreen = DashboardScreen::WEATHER;
-    } else if (_currentScreen == DashboardScreen::WEATHER) {
-        // Only switch to CHARGING screen if we are actively plugged in
-        if (_powerSource == PowerSource::CHARGING || _powerSource == PowerSource::USB_POWERED) {
-            _currentScreen = DashboardScreen::CHARGING;
-        } else {
-            _currentScreen = DashboardScreen::TIME;
-        }
     } else {
         _currentScreen = DashboardScreen::TIME;
     }
@@ -114,11 +101,6 @@ void ClockEngine::toggleSubScreen() {
 
 void ClockEngine::resetView() {
     _currentScreen = DashboardScreen::TIME;
-    _screenSwitchTimer = 0;
-}
-
-void ClockEngine::showChargingScreen() {
-    _currentScreen = DashboardScreen::CHARGING;
     _screenSwitchTimer = 0;
 }
 
@@ -143,10 +125,6 @@ void ClockEngine::setDate(uint8_t day, uint8_t month, uint16_t year, uint8_t dow
 
 bool ClockEngine::setBattery(uint8_t percent, PowerSource source) {
     bool justPluggedIn = (_powerSource != source && source == PowerSource::CHARGING);
-    if (justPluggedIn) {
-        _currentScreen = DashboardScreen::CHARGING;
-        _screenSwitchTimer = 0;
-    }
     _battPercent = percent; 
     _powerSource = source;
     return justPluggedIn;
@@ -183,13 +161,14 @@ void ClockEngine::drawStatusBar(DisplayType& d) {
     // WiFi icon (top-left)
     drawWiFiIcon(d, 0 + _pixelShiftX, 0 + _pixelShiftY);
 
-#if ENABLE_BATTERY_MODULE
-    if (_powerSource == PowerSource::USB_POWERED) {
-        drawBatteryIcon(d, SCREEN_WIDTH - 10 + _pixelShiftX, 1 + _pixelShiftY);
-    } else {
-        drawBatteryIcon(d, SCREEN_WIDTH - 15 + _pixelShiftX, 0 + _pixelShiftY);
+    extern PowerManager powerMgr;
+    if (powerMgr.hasBattery()) {
+        if (_powerSource == PowerSource::USB_POWERED) {
+            drawBatteryIcon(d, SCREEN_WIDTH - 10 + _pixelShiftX, 1 + _pixelShiftY);
+        } else {
+            drawBatteryIcon(d, SCREEN_WIDTH - 15 + _pixelShiftX, 0 + _pixelShiftY);
+        }
     }
-#endif
 }
 
 void ClockEngine::drawBatteryIcon(DisplayType& d, int16_t x, int16_t y) {
@@ -216,7 +195,7 @@ void ClockEngine::drawBatteryIcon(DisplayType& d, int16_t x, int16_t y) {
 
     // Number of solid (fully charged) bars
     int solidBars = 0;
-    if (_powerSource == PowerSource::CHARGING) {
+    if (_powerSource == PowerSource::CHARGING && _battPercent < 100) {
         // While charging, one bar is always blinking (the one currently filling)
         if      (_battPercent >= 80) solidBars = 3; // 4th blinks
         else if (_battPercent >= 55) solidBars = 2; // 3rd blinks
@@ -235,7 +214,7 @@ void ClockEngine::drawBatteryIcon(DisplayType& d, int16_t x, int16_t y) {
     for (int i = 0; i < 4; i++) {
         if (i < solidBars) {
             d.fillRect(x + offsets[i], y + 2, 2, 4, DISPLAY_WHITE); // Solid
-        } else if (i == solidBars && _powerSource == PowerSource::CHARGING) {
+        } else if (i == solidBars && _powerSource == PowerSource::CHARGING && _battPercent < 100) {
             if (blinkOn) d.fillRect(x + offsets[i], y + 2, 2, 4, DISPLAY_WHITE); // Blinking
         }
     }
@@ -274,46 +253,6 @@ void ClockEngine::drawWeatherIcon(DisplayType& d, int16_t x, int16_t y) {
     }
 }
 
-void ClockEngine::renderChargingDashboard(DisplayType& d) {
-    // Draw WiFi icon in top left, but skip the small battery icon since we have a big one
-    drawWiFiIcon(d, 0 + _pixelShiftX, 0 + _pixelShiftY);
-
-    const char* title = (_powerSource == PowerSource::USB_POWERED) ? "USB Power" : "Charging";
-    u8g2Fonts.setFont(FONT_MEDIUM);
-    int16_t tw = u8g2Fonts.getUTF8Width(title);
-    u8g2Fonts.setCursor((SCREEN_WIDTH - tw) / 2 + _pixelShiftX, 25 + _pixelShiftY);
-    u8g2Fonts.print(title);
-    
-    if (_powerSource == PowerSource::CHARGING) {
-        // Draw a large battery icon in the center (40px wide x 16px tall)
-        int16_t bx = (SCREEN_WIDTH - 44) / 2 + _pixelShiftX;
-        int16_t by = 36 + _pixelShiftY;
-
-        d.drawRect(bx, by, 40, 16, DISPLAY_WHITE);         // Body
-        d.fillRect(bx + 40, by + 4, 3, 8, DISPLAY_WHITE);  // Nub
-
-        int solidBars = 0;
-        if      (_battPercent >= 80) solidBars = 3;
-        else if (_battPercent >= 55) solidBars = 2;
-        else if (_battPercent >= 30) solidBars = 1;
-        else                         solidBars = 0;
-
-        // 4 bars, each 7px wide, 2px gaps. Offsets: 2, 11, 20, 29
-        const int16_t offsets[] = {2, 11, 20, 29};
-        bool blinkOn = (millis() / 500) % 2 == 0;
-
-        for (int i = 0; i < 4; i++) {
-            if (i < solidBars) {
-                d.fillRect(bx + offsets[i], by + 2, 7, 12, DISPLAY_WHITE); // Solid
-            } else if (i == solidBars) {
-                if (blinkOn) d.fillRect(bx + offsets[i], by + 2, 7, 12, DISPLAY_WHITE); // Blink
-            }
-        }
-    } else {
-        // For USB only, just draw the plug icon in the center
-        d.drawBitmap((SCREEN_WIDTH - 16) / 2 + _pixelShiftX, 36 + _pixelShiftY, icon_usb_power, 16, 8, DISPLAY_WHITE);
-    }
-}
 
 void ClockEngine::renderWeatherDashboard(DisplayType& d) {
     drawStatusBar(d);

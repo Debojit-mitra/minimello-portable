@@ -13,6 +13,10 @@ public:
     void save();
     void resetToDefaults();
 
+    // --- System / Hardware ---
+    String   macId;             // Unique MAC address string
+    String   getDeviceId();     // Dynamically constructs MIME0x<MAC> based on hardware
+
     // --- WiFi ---
     String   wifiSSID;
     String   wifiPass;

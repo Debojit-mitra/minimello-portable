@@ -4,9 +4,11 @@
 #include "server/web_server.h"
 #include "version.h"
 #include "web_ui_data.h"
+#include "power/power_manager.h"
 #include <ArduinoJson.h>
 
 extern OTAManager otaMgr;
+extern PowerManager powerMgr;
 
 void MiniWebServer::handlePostWifi(AsyncWebServerRequest *req, uint8_t *data,
                                    size_t len) {
@@ -54,6 +56,15 @@ void MiniWebServer::handlePostOtaCheck(AsyncWebServerRequest *req) {
 }
 
 void MiniWebServer::handlePostOtaUpdate(AsyncWebServerRequest *req) {
+  if (powerMgr.hasBattery() && powerMgr.getBatteryPercent() < 40) {
+    AsyncWebServerResponse *resp =
+        req->beginResponse(400, "application/json",
+                           "{\"ok\":false,\"error\":\"Battery must be more than 40%. Please charge before updating.\"}");
+    addCorsHeaders(resp);
+    req->send(resp);
+    return;
+  }
+
   AsyncWebServerResponse *resp =
       req->beginResponse(200, "application/json",
                          "{\"ok\":true,\"msg\":\"OTA update starting...\"}");

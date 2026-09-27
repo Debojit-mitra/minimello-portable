@@ -58,33 +58,7 @@ NetState lastWiFiState = NetState::DISCONNECTED; // For CPU frequency scaling
 // Boot animation is handled in ui/boot_animation.cpp
 
 void drawOtaProgress(int percent) {
-  // Clear entire screen for clean OTA mode
-  display.clearDisplay();
-
-  // Vertically centered progress bar
-  int16_t barW = 100;
-  int16_t barH = 8;
-  int16_t barX = (SCREEN_WIDTH - barW) / 2;
-  int16_t barY = (SCREEN_HEIGHT - barH) / 2 - 6; // slightly above center
-
-  // Progress bar outline
-  display.drawRoundRect(barX, barY, barW, barH, 3, DISPLAY_WHITE);
-
-  // Progress bar fill
-  int16_t fillW = (int16_t)((barW - 4) * percent / 100);
-  if (fillW > 0) {
-    display.fillRoundRect(barX + 2, barY + 2, fillW, barH - 4, 2,
-                          DISPLAY_WHITE);
-  }
-
-  // Label below progress bar
-  char label[32];
-  snprintf(label, sizeof(label), "Updating: %d%%", percent);
-  u8g2Fonts.setFont(FONT_MEDIUM);
-  int16_t lbw = u8g2Fonts.getUTF8Width(label);
-  u8g2Fonts.setCursor((SCREEN_WIDTH - lbw) / 2, barY + barH + 16);
-  u8g2Fonts.print(label);
-  display.display();
+  UIComponents::drawOtaProgress(display, percent);
 }
 
 void onTouchEvent(TouchEvent event) {
@@ -92,9 +66,9 @@ void onTouchEvent(TouchEvent event) {
   screenMgr.resetAutoSwitchTimer(); // Pause/reset auto-switch timer on any
                                     // touch interaction
 
-#if ENABLE_BATTERY_MODULE && ENABLE_CPU_SCALING
+#if ENABLE_CPU_SCALING
   // On battery power, instantly boost CPU to 160MHz so UI doesn't lag while waking up
-  if (powerMgr.getPowerSource() == PowerSource::BATTERY) {
+  if (powerMgr.hasBattery() && powerMgr.getPowerSource() == PowerSource::BATTERY) {
     powerMgr.setCpuFrequency(CPU_FREQ_HIGH);
   }
 #endif
@@ -186,19 +160,32 @@ void setup() {
   // configMgr.begin(); -> Moved to very top!
 
   // --- Step 2: Battery ---
-#if ENABLE_BATTERY_MODULE
   drawBootProgress(2, BOOT_PROGRESS_STEPS, "Power system...");
-#endif
   powerMgr.begin(PIN_BATTERY_ADC, PIN_CHRG); // Must still run to set internal state
-#if ENABLE_BATTERY_MODULE
-  if (powerMgr.getPowerSource() == PowerSource::USB_POWERED) {
-    LOG_I("POWER", "USB powered (no battery)");
-  } else {
-    LOG_I("POWER", "Battery: %.2fV (%d%%)", powerMgr.getBatteryVoltage(),
-          powerMgr.getBatteryPercent());
+  if (powerMgr.hasBattery()) {
+    if (powerMgr.getPowerSource() == PowerSource::USB_POWERED) {
+      LOG_I("POWER", "USB powered (no battery)");
+    } else {
+      LOG_I("POWER", "Battery: %.2fV (%d%%)", powerMgr.getBatteryVoltage(),
+            powerMgr.getBatteryPercent());
+    }
+
+    // ── Boot guard: if battery is still critical, don't run full boot ──
+    // This prevents an infinite restart loop where: critical sleep → GPIO2
+    // strapping pin phantom wake → full boot (draws heavy current, depresses
+    // voltage further) → critical again → repeat forever.
+    if (powerMgr.isCriticalBattery()) {
+      LOG_E("POWER", "Boot guard: battery still critical (%.2fV, %d%%). Re-sleeping.",
+            powerMgr.getBatteryVoltage(), powerMgr.getBatteryPercent());
+      // Brief flash so user knows it's not bricked
+      UIComponents::showLowBatteryScreen(display, 1500);
+      
+      powerMgr.displayOff(display);
+      // Sleep for 30 min then recheck — avoids touch-only wake loop
+      powerMgr.enterDeepSleep(NIGHT_WAKE_CHECK_US);
+      // Never reaches here — deep sleep reboots on wake
+    }
   }
-  delay(100);
-#endif
 
   // --- Step 3: Touch ---
   drawBootProgress(3, BOOT_PROGRESS_STEPS, "Touch sensor...");
@@ -375,21 +362,23 @@ void loop() {
     // Smart scaling: We apply scaling on BATTERY and CHARGING. 
     // The TP4056 Type-C port is power-only, so we don't need to lock to 160MHz to protect USB-CDC 
     // (unless running purely in USB_POWERED mode during bare-board development).
-#if ENABLE_BATTERY_MODULE && ENABLE_CPU_SCALING
-    PowerSource pwrSrc = powerMgr.getPowerSource();
-    if (pwrSrc == PowerSource::BATTERY || pwrSrc == PowerSource::CHARGING) {
-      NetState currentWiFiState = networkMgr.getState();
-      if (currentWiFiState != lastWiFiState) {
-        if (currentWiFiState == NetState::WIFI_OFF) {
-          powerMgr.setCpuFrequency(CPU_FREQ_LOW);
-        } else if (lastWiFiState == NetState::WIFI_OFF) {
-          powerMgr.setCpuFrequency(CPU_FREQ_HIGH);
+#if ENABLE_CPU_SCALING
+    if (powerMgr.hasBattery()) {
+      PowerSource pwrSrc = powerMgr.getPowerSource();
+      if (pwrSrc == PowerSource::BATTERY || pwrSrc == PowerSource::CHARGING) {
+        NetState currentWiFiState = networkMgr.getState();
+        if (currentWiFiState != lastWiFiState) {
+          if (currentWiFiState == NetState::WIFI_OFF) {
+            powerMgr.setCpuFrequency(CPU_FREQ_LOW);
+          } else if (lastWiFiState == NetState::WIFI_OFF) {
+            powerMgr.setCpuFrequency(CPU_FREQ_HIGH);
+          }
+          lastWiFiState = currentWiFiState;
         }
-        lastWiFiState = currentWiFiState;
+      } else {
+        // USB_POWERED (no battery) - lock to 160MHz for raw development / CDC stability
+        powerMgr.setCpuFrequency(CPU_FREQ_HIGH);
       }
-    } else {
-      // USB_POWERED (no battery) - lock to 160MHz for raw development / CDC stability
-      powerMgr.setCpuFrequency(CPU_FREQ_HIGH);
     }
 #endif
 
@@ -424,53 +413,33 @@ void loop() {
           (now - lastInteractionMs) > NIGHT_MODE_IDLE_MS) {
 
         if (!isScreenSleeping) {
-#if ENABLE_BATTERY_MODULE
-          LOG_I("SYSTEM", "Night mode: entering deep sleep");
-#else
-          LOG_I("SYSTEM", "Night mode: entering screensaver");
-#endif
+          if (powerMgr.hasBattery()) {
+            LOG_I("SYSTEM", "Night mode: entering deep sleep");
+          } else {
+            LOG_I("SYSTEM", "Night mode: entering screensaver");
+          }
 
           // Show sleep notification to user
-          display.clearDisplay();
-          display.fillCircle(64, 24, 10, DISPLAY_WHITE);
-          display.fillCircle(58, 20, 10, DISPLAY_BLACK); // Crescent cutout
+          UIComponents::showSleepScreen(display);
 
-          u8g2Fonts.setFont(FONT_MEDIUM);
-          const char *sleepMsg = "Sleeping...";
-          int16_t sw = u8g2Fonts.getUTF8Width(sleepMsg);
-          u8g2Fonts.setCursor((SCREEN_WIDTH - sw) / 2, 52);
-          u8g2Fonts.print(sleepMsg);
-
-          u8g2Fonts.setFont(FONT_SMALL);
-          const char *hintMsg = "Touch to wake";
-          int16_t hw = u8g2Fonts.getUTF8Width(hintMsg);
-          u8g2Fonts.setCursor((SCREEN_WIDTH - hw) / 2, 63);
-          u8g2Fonts.print(hintMsg);
-
-          display.display();
-          delay(2000); // Let user see the message
-
-          display.clearDisplay();
-          display.display();
-
-#if ENABLE_BATTERY_MODULE
-          // Shut down OLED charge pump before deep sleep (saves ~15mA)
-          powerMgr.displayOff(display);
-          powerMgr.enterDeepSleep(NIGHT_WAKE_CHECK_US);
-#else
-          // Soft sleep for USB power (keeps WiFi and OTA alive)
-          // Turn off OLED charge pump entirely instead of just dimming
-          powerMgr.displayOff(display);
-          isScreenSleeping = true;
-#endif
+          if (powerMgr.hasBattery()) {
+            // Shut down OLED charge pump before deep sleep (saves ~15mA)
+            powerMgr.displayOff(display);
+            powerMgr.enterDeepSleep(NIGHT_WAKE_CHECK_US);
+          } else {
+            // Soft sleep for USB power (keeps WiFi and OTA alive)
+            // Turn off OLED charge pump entirely instead of just dimming
+            powerMgr.displayOff(display);
+            isScreenSleeping = true;
+          }
         }
       }
     }
     // Update clock with battery/wifi/ip status
-    if (clockEngine.setBattery(powerMgr.getBatteryPercent(), powerMgr.getPowerSource())) {
-      screenMgr.setEngine(ActiveEngine::CLOCK);
-      clockEngine.showChargingScreen();
-      screenMgr.resetAutoSwitchTimer();
+    if (powerMgr.hasBattery() && clockEngine.setBattery(powerMgr.getBatteryPercent(), powerMgr.getPowerSource())) {
+      // One-shot charging notification (old dashboard style, shown for ~3s)
+      LOG_I("POWER", "Charger connected — showing charging screen");
+      UIComponents::showChargingAnimation(display, powerMgr.getBatteryPercent());
     }
     clockEngine.setWiFi(networkMgr.getState(), networkMgr.getRSSI());
     clockEngine.setIP(networkMgr.getIP());
@@ -483,21 +452,17 @@ void loop() {
     }
 
 #if ENABLE_BATTERY_MODULE
-    // Low battery warning
+    // Low battery warning — use timer-based deep sleep (not touch-only)
+    // to prevent GPIO2 strapping pin phantom wakes from causing boot loops.
+    // The boot guard in setup() catches re-wakes while still critical.
     if (powerMgr.isCriticalBattery()) {
-      LOG_E("POWER", "CRITICAL battery! Entering deep sleep.");
-      display.clearDisplay();
-      u8g2Fonts.setFont(FONT_MEDIUM);
-      const char *lowBattMsg = "LOW BATTERY";
-      int16_t lbw = u8g2Fonts.getUTF8Width(lowBattMsg);
-      u8g2Fonts.setCursor((SCREEN_WIDTH - lbw) / 2, 36);
-      u8g2Fonts.print(lowBattMsg);
-      display.display();
-      delay(2000);
-      display.clearDisplay();
-      display.display();
+      LOG_E("POWER", "CRITICAL battery (%.2fV, %d%%)! Entering deep sleep.",
+            powerMgr.getBatteryVoltage(), powerMgr.getBatteryPercent());
+      
+      UIComponents::showLowBatteryScreen(display, 2000);
+      
       powerMgr.displayOff(display);    // Shut down OLED charge pump
-      powerMgr.enterDeepSleep(0); // Sleep until touch
+      powerMgr.enterDeepSleep(NIGHT_WAKE_CHECK_US); // Wake every 30 min to recheck
     }
 #endif
   }

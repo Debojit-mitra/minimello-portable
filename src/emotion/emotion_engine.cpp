@@ -53,7 +53,7 @@ void EmotionEngine::update(uint32_t deltaMs) {
     updateParticles(deltaMs);
 
     // Spawn particles for certain emotions
-    if ((_emotion == Emotion::LOVE || _emotion == Emotion::PLAYFUL_LOVE) && random(100) < 3) {
+    if (_emotion == Emotion::LOVE && random(100) < 3) {
         spawnParticle(0);  // hearts
     }
     if (_emotion == Emotion::SLEEPY && random(100) < 2) {

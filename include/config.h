@@ -21,8 +21,7 @@
 #define I2C_CLOCK_HZ 400000 // 400kHz I2C (SSD1306 max spec)
 
 // --- Battery ---
-#define ENABLE_BATTERY_MODULE                                                  \
-  true // Set to true if battery & voltage divider are present
+// Note: Battery presence is now auto-detected at boot by PowerManager.
 #define BATTERY_DIVIDER_RATIO 2.018f  // Calibrated: increased from 2.018 to compensate for 3.60V false-triggers
 #define BATTERY_FULL_MV 4200        // 4.20V = 100%
 #define BATTERY_EMPTY_MV 3350       // 3.35V = 0% (headroom above ESP32-C3 brownout)

@@ -45,8 +45,7 @@ enum class ClockFace : uint8_t {
 
 enum class DashboardScreen : uint8_t {
     TIME = 0,
-    WEATHER = 1,
-    CHARGING = 2
+    WEATHER = 1
 };
 
 class ClockEngine {
@@ -63,7 +62,6 @@ public:
     // Sub-screen control (Time vs Weather)
     void toggleSubScreen();
     void resetView();
-    void showChargingScreen();
 
     // Data setters (called by main loop with fresh data)
     void setTime(uint8_t hour, uint8_t minute, uint8_t second);
@@ -113,7 +111,6 @@ private:
 
     // Render weather dashboard
     void renderWeatherDashboard(DisplayType& d);
-    void renderChargingDashboard(DisplayType& d);
 
     // Shared UI elements
     void drawStatusBar(DisplayType& d);

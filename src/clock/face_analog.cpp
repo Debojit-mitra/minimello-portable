@@ -1,6 +1,7 @@
 #include "clock_engine.h"
 #include "bitmaps/icons.h"
 #include "font_config.h"
+#include "power/power_manager.h"
 #include <Fonts/FreeSansBold12pt7b.h>
 #include <Fonts/FreeSansBold18pt7b.h>
 #include <Fonts/FreeSans9pt7b.h>
@@ -55,13 +56,14 @@ void ClockEngine::renderAnalog(DisplayType& d) {
     int16_t y3 = 41 + _pixelShiftY;
     int16_t y4 = 60 + _pixelShiftY;
     
-#if ENABLE_BATTERY_MODULE
-    // Perfect optical baselines for constrained 54px height
-    y1 = 9;
-    y2 = 24;
-    y3 = 35;
-    y4 = 52;
-#endif
+    extern PowerManager powerMgr;
+    if (powerMgr.hasBattery()) {
+        // Perfect optical baselines for constrained 54px height
+        y1 = 9;
+        y2 = 24;
+        y3 = 35;
+        y4 = 52;
+    }
     
     // Spread evenly when l4 is empty (o'clock case)
     if (strlen(l4) == 0) {

@@ -44,9 +44,15 @@ static const int CURVE_SIZE = sizeof(DISCHARGE_CURVE) / sizeof(DISCHARGE_CURVE[0
 void PowerManager::begin(uint8_t adcPin, uint8_t chrgPin) {
     _adcPin = adcPin;
     _chrgPin = chrgPin;
-#if ENABLE_BATTERY_MODULE
+    
+    // Always configure pins first
     analogSetAttenuation(ADC_11db);  // Full range (~0-2.6V input)
-    pinMode(_adcPin, INPUT);
+    
+    // Briefly enable pulldown to drain floating pins (desktop mode)
+    pinMode(_adcPin, INPUT_PULLDOWN);
+    delay(5);
+    pinMode(_adcPin, INPUT); // Revert to float for clean ADC read
+    
     pinMode(_chrgPin, INPUT_PULLUP); // TP4056 CHRG is open-drain, needs pullup
 
     // Wait a full 1 second for the battery voltage to stabilize under boot load
@@ -67,37 +73,48 @@ void PowerManager::begin(uint8_t adcPin, uint8_t chrgPin) {
         delay(50);
     }
     _rawVoltage = bootSum / BOOT_SAMPLES;
-    _voltage = _rawVoltage;
-
-    // Blend with RTC-retained last-known voltage if plausible
-    if (_rtcLastVoltage >= 2.5f && _rtcLastVoltage <= 4.3f) {
-        _voltage = (_rtcLastVoltage + _rawVoltage) / 2.0f;
-        LOG_I("POWER", "Blended boot voltage: %.2fV (RTC: %.2fV, fresh: %.2fV)",
-              _voltage, _rtcLastVoltage, _rawVoltage);
+    
+    // Auto-detect hardware based on voltage
+    if (_rawVoltage > 1.0f) {
+        _hasBattery = true;
+        LOG_I("POWER", "Auto-detected Portable Unit (V: %.2fV)", _rawVoltage);
+    } else {
+        _hasBattery = false;
+        LOG_I("POWER", "Auto-detected Desktop Unit (V: %.2fV). Disabling battery module.", _rawVoltage);
     }
 
-    _rawPercent = voltageToPercent(_voltage);
-    _percent = _rawPercent;
-    detectPowerSource();
-    
-    const char* sourceStr = "BATTERY";
-    if (_powerSource == PowerSource::CHARGING) sourceStr = "CHARGING (USB+Batt)";
-    if (_powerSource == PowerSource::USB_POWERED) sourceStr = "USB ONLY";
-    LOG_I("POWER", "Initial power source: %s [V: %.2fV, CHRG_PIN: %d]", sourceStr, _voltage, _chrgPinLow);
-#else
-    _rawVoltage = 4.2f;
-    _voltage = 4.2f;
-    _rawPercent = 100;
-    _percent = 100;
-    _powerSource = PowerSource::USB_POWERED;
-#endif
+    if (_hasBattery) {
+        _voltage = _rawVoltage;
+        // Blend with RTC-retained last-known voltage if plausible
+        if (_rtcLastVoltage >= 2.5f && _rtcLastVoltage <= 4.3f) {
+            _voltage = (_rtcLastVoltage + _rawVoltage) / 2.0f;
+            LOG_I("POWER", "Blended boot voltage: %.2fV (RTC: %.2fV, fresh: %.2fV)",
+                  _voltage, _rtcLastVoltage, _rawVoltage);
+        }
+
+        _rawPercent = voltageToPercent(_voltage);
+        _percent = _rawPercent;
+        detectPowerSource();
+        
+        const char* sourceStr = "BATTERY";
+        if (_powerSource == PowerSource::CHARGING) sourceStr = "CHARGING (USB+Batt)";
+        if (_powerSource == PowerSource::USB_POWERED) sourceStr = "USB ONLY";
+        LOG_I("POWER", "Initial power source: %s [V: %.2fV, CHRG_PIN: %d]", sourceStr, _voltage, _chrgPinLow);
+    } else {
+        _rawVoltage = 4.2f;
+        _voltage = 4.2f;
+        _rawPercent = 100;
+        _percent = 100;
+        _powerSource = PowerSource::USB_POWERED;
+    }
     
     _initialized = true;
     _lastReadMs = millis();
 }
 
 void PowerManager::update(uint32_t nowMs) {
-#if ENABLE_BATTERY_MODULE
+    if (!_hasBattery) return;
+
     // Detect power source changes immediately (digitalRead only, no ADC overhead)
     detectPowerSource();
 
@@ -133,7 +150,6 @@ void PowerManager::update(uint32_t nowMs) {
             }
         }
     }
-#endif
 }
 
 float PowerManager::getBatteryVoltage() const {
@@ -142,6 +158,10 @@ float PowerManager::getBatteryVoltage() const {
 
 uint8_t PowerManager::getBatteryPercent() const {
     return _percent;
+}
+
+bool PowerManager::hasBattery() const {
+    return _hasBattery;
 }
 
 

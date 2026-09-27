@@ -109,6 +109,8 @@ async function refreshStatus() {
 
     // System info
     document.getElementById('info-version').textContent = s.version;
+    document.getElementById('info-device-id').textContent = s.device_id || '---';
+    document.getElementById('info-mac-address').textContent = s.mac_address || '---';
     document.getElementById('info-wifi').textContent =
         s.wifi_connected ? ('Connected (' + s.wifi_rssi + ' dBm)') : 'Disconnected';
     document.getElementById('info-ip').textContent = s.ip;
@@ -193,7 +195,7 @@ function formatUptime(s) {
 function getEmotionIndex(name) {
     const map = { 'Neutral': 0, 'Happy': 1, 'Sad': 2, 'Angry': 3,
                   'Surprised': 4, 'Sleepy': 5, 'Love': 6, 'Wink': 7,
-                  'Joyful': 8, 'Excited': 9, 'Starstruck': 10, 'Playful Love': 11 };
+                  'Joyful': 8, 'Excited': 9, 'Starstruck': 10 };
     return map[name] ?? -1;
 }
 

@@ -1,6 +1,8 @@
 #include "config/config_manager.h"
 #include "config.h"
 #include "debug_config.h"
+#include <WiFi.h>
+#include "power/power_manager.h"
 
 // =============================================================
 // ConfigManager — Implementation
@@ -8,6 +10,17 @@
 
 void ConfigManager::begin() {
     prefs.begin("minimello", false);  // namespace, read-write
+
+    // --- System ID (MAC based) ---
+    macId = prefs.getString("device_id", ""); // Reuse existing key
+    if (macId.isEmpty()) {
+        uint8_t mac[6];
+        WiFi.macAddress(mac);
+        char macStr[13];
+        snprintf(macStr, sizeof(macStr), "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        macId = String(macStr);
+        prefs.putString("device_id", macId);
+    }
 
     // Load saved values (or defaults if first boot)
     wifiSSID        = prefs.getString("wifi_ssid", "");
@@ -44,6 +57,7 @@ void ConfigManager::begin() {
 }
 
 void ConfigManager::save() {
+    prefs.putString("device_id",    macId);
     prefs.putString("wifi_ssid",    wifiSSID);
     prefs.putString("wifi_pass",    wifiPass);
     prefs.putInt("tz_offset",       tzOffset);
@@ -72,6 +86,7 @@ void ConfigManager::resetToDefaults() {
 }
 
 void ConfigManager::loadDefaults() {
+    // Note: We deliberately don't reset macId so it remains permanent across factory resets
     wifiSSID        = "";
     wifiPass        = "";
     tzOffset        = DEFAULT_TZ_OFFSET;
@@ -91,4 +106,11 @@ void ConfigManager::loadDefaults() {
     weatherCity     = "";
     userName        = "";
     debugMode       = false;
+}
+
+String ConfigManager::getDeviceId() {
+    extern PowerManager powerMgr;
+    String typeCode = powerMgr.hasBattery() ? "02" : "01";
+    String shortMac = macId.length() >= 4 ? macId.substring(macId.length() - 4) : macId;
+    return "MIME" + typeCode + "-" + shortMac;
 }

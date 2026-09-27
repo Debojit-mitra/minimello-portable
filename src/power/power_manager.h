@@ -33,6 +33,7 @@ public:
     PowerSource getPowerSource() const;
     bool        isCharging() const;
     bool        isOnUSBPower() const;  // USB only, no battery
+    bool        hasBattery() const;    // Auto-detected at boot
 
     // Deep sleep
     void enterDeepSleep(uint64_t wakeupTimerUs = 0);
@@ -55,6 +56,7 @@ private:
     uint8_t  _rawPercent = 0;          // Unfiltered percentage from voltage
     uint32_t _lastReadMs = 0;
     bool     _initialized = false;     // First reading flag
+    bool     _hasBattery = false;      // Auto-detected flag
 
     // Charging detection state
     PowerSource _powerSource = PowerSource::BATTERY;

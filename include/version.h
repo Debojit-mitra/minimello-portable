@@ -7,5 +7,5 @@
 // the latest GitHub release tag to determine if an update is available.
 // Format: "MAJOR.MINOR.PATCH"
 
-#define FIRMWARE_VERSION "2.0.1"
+#define FIRMWARE_VERSION "2.1.0"
 #define FIRMWARE_NAME "MiniMello"

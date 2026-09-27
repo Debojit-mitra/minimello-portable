@@ -26,7 +26,6 @@ enum class Emotion : uint8_t {
     JOYFUL,
     EXCITED,
     STARSTRUCK,
-    PLAYFUL_LOVE,
     COUNT  // sentinel for iteration
 };
 
