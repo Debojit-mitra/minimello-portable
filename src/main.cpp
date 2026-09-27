@@ -219,7 +219,7 @@ void setup() {
 
   // Wait for connection (up to 3 attempts * 15s during boot)
   uint32_t wifiStart = millis();
-  while (networkMgr.getState() == NetState::CONNECTING &&
+  while ((networkMgr.getState() == NetState::CONNECTING || networkMgr.isAsyncConnecting()) &&
          millis() - wifiStart < (WIFI_CONNECT_TIMEOUT_MS * 3)) {
     networkMgr.update(millis());
     if ((millis() - wifiStart) % 2000 < 100) {

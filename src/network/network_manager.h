@@ -49,6 +49,9 @@ public:
     bool isTimeSynced() const;
     bool needsTimeSync(uint32_t nowMs) const;
 
+    // Check if a non-blocking PHY sequence is active
+    bool isAsyncConnecting() const;
+
 private:
     NetState _state = NetState::DISCONNECTED;
     String   _ssid;

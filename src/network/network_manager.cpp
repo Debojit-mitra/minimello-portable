@@ -310,3 +310,8 @@ void NetworkManager::generateAPName() {
   snprintf(suffix, sizeof(suffix), "%02X%02X", mac[4], mac[5]);
   _apName = String(WIFI_AP_PREFIX) + suffix;
 }
+
+bool NetworkManager::isAsyncConnecting() const {
+  return _asyncConnectStep != 0;
+}
+
